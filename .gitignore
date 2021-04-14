@@ -1,1 +1,5 @@
 .stack-work
+.vscode
+.DS_Store
+dist-newstyle/
+*~
