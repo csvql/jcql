@@ -26,7 +26,7 @@ tokens :-
 <0> true { \p _ -> TBool True p}
 <0> false { \p _ -> TBool False p}
 
-<0> \(|\)              { mkBracket }
+<0> \(|\)|\[|\]  { mkBracket }
 <0> \.    { \p _ -> TDot p }
 <0> \,    { \p _ -> TComma p }
 <0> @single_str|@double_str { \p s -> TString (strip_quotes s) p}

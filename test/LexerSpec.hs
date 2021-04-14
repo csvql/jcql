@@ -46,7 +46,7 @@ testRandomWordWithRandomCapitalization w a = l w == l randomlyCapitalized
 
 lexOperators = [ "=", "==", ">=", "<=", ">", "<", "not", "and", "or", "-", "+", "/" ]
 
-lexBrackets = [ "(", ")" ]
+lexBrackets = [ "(", ")", "[", "]" ]
 
 lexStringQuotes = ["\"", "\'"]
 
