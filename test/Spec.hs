@@ -1,2 +1,8 @@
+import Test.Tasty (defaultMain, testGroup, TestTree)
+import LexerSpec (testLexer)
+
 main :: IO ()
-main = putStrLn "Test suite not yet implemented"
+main = defaultMain testAll
+
+testAll :: TestTree
+testAll = testGroup "Unit Tests" [testLexer]
