@@ -33,7 +33,8 @@ testLexer =
         testCase "lexes methods" $ l ".a1960b()" @?= [TDot startPn, TIdentifier "a1960b" (AlexPn 1 1 2), TBracket "(" (AlexPn 7 1 8), TBracket ")" (AlexPn 8 1 9)]
       ],
       testCase "lexes dot" $ l "." @?= [TDot startPn],
-      testCase "lexes a comma" $ l "," @?= [TComma startPn]
+      testCase "lexes a comma" $ l "," @?= [TComma startPn],
+      testCase "lexes arrow function" (l "=>  " @?= [TArrow startPn])
     ]
 
 -- random capitalization per character is applied to create a mixed-case string

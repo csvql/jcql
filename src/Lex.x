@@ -22,7 +22,8 @@ tokens :-
 
 <0> "//".*     ;
 <0> $white+    ;
-<0> (=|==|\-|\+|\/|\^|\%|@compare|not|and|or) { \p s -> TOperator (map toLower s) p }
+<0> => { \p s -> TArrow p }
+<0> =|==|\-|\+|\/|\^|\%|@compare|not|and|or { \p s -> TOperator (map toLower s) p }
 <0> true { \p _ -> TBool True p}
 <0> false { \p _ -> TBool False p}
 
@@ -54,5 +55,6 @@ data Token =
   | TString String AlexPosn
   | TInt Int AlexPosn
   | TBool Bool AlexPosn
+  | TArrow AlexPosn
   deriving (Eq,Show)
 }
