@@ -1,20 +1,20 @@
 module AST where
 
-data Query = 
-  [Import] -- import (...)
-  Identifer -- take {{identifier}}
-  [Join] -- join (...)
-  Filter -- filter 
-  Select -- select
+data Query
+  = AST [Import] -- import (...)
+    Identifier -- take {{identifier}}
+    [Join] -- join (...)
+    Filter -- filter 
+    Select -- select
 
 data Import =
-  AliasedImport Identifier Location 
+  AliasedImport Identifier Location
   | UnaliasedImport Location
 
 -- TODO: Think about whether we need any more joins than this 
-data Join = 
-  Inner Identifer Expr
-  | Cross Identifer 
+data Join =
+  Inner Identifier Expr
+  | Cross Identifier
 
 type Location = String
 type Identifier = String
@@ -34,7 +34,7 @@ data Expr =
   | Case [(Expr, Expr)] Expr -- CASE statement, https://www.w3schools.com/sql/sql_case.asp
     deriving (Show,Eq)
 
-data Value = 
+data Value =
     ValueString String
     | ValueInt Int
     | ValueBool Bool
@@ -54,6 +54,5 @@ data BinaryOpType =
   | Product -- multiply, *
   deriving (Show,Eq)
 
-data UnaryOpType =
-  NOT
-  deriving (Show,Eq)
+data UnaryOpType = NOT
+  deriving (Show, Eq)
