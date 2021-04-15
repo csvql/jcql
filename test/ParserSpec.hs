@@ -14,11 +14,11 @@ testParser =
   testGroup
     "Parser"
     [
-        testCase "Parses import" (parse "import 'a.csv'" @?= AST [UnaliasedImport "a.csv"] [] [] [] [])
+        testCase "Parses import" (parse "import 'a.csv'" @?= AST [UnaliasedImport "a.csv"] [] [] (ValueExpr (ValueBool True)) [])
     ]
 
 
 
 
-parse :: String -> AST
+parse :: String -> Query
 parse = parseJCQL . alexScanTokens

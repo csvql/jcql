@@ -6,15 +6,18 @@ data Query
     [Join] -- join (...)
     Filter -- filter 
     Select -- select
+    deriving (Show, Eq)
 
 data Import =
   AliasedImport Identifier Location
   | UnaliasedImport Location
+    deriving (Show, Eq)
 
 -- TODO: Think about whether we need any more joins than this 
 data Join =
   Inner Identifier Expr
   | Cross Identifier
+    deriving (Show, Eq)
 
 type Location = String
 type Identifier = String
@@ -24,6 +27,7 @@ data SelectItem =
   SelectExpr Expr
   | QualifiedWildcard Identifier
   | Wildcard
+    deriving (Show, Eq)
 
 data Expr =
   TableColumn String Int-- identifier, such as table name

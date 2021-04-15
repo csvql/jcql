@@ -19,22 +19,20 @@ import AST
     then {TKeyword "then" _}
     else {TKeyword "else" _}
     and {TKeyword "and" _}
-    => {TArrow _}
-    = {TOperator "=" _}
-    == {TOperator "==" _}
-    - {TOperator "-" _}
-    + {TOperator "+" _}
-    / {TOperator "/" _}
-    ^ {TOperator "^" _}
-    % {TOperator "%" _}
+    "=" {TOperator "=" _}
+    "==" {TOperator "==" _}
+    "-" {TOperator "-" _}
+    "+" {TOperator "+" _}
+    "/" {TOperator "/" _}
+    "^" {TOperator "^" _}
+    "%" {TOperator "%" _}
     compare {TOperator "compare" _}
     not {TOperator "not" _}
-    and {TOperator "and" _}
     or {TOperator "or" _}
-    ( {TBracket "(" _}
-    ) {TBracket ")" _}
-    , {TComma _}
-    . {TDot _}
+    "(" {TBracket "(" _}
+    ")" {TBracket ")" _}
+    "," {TComma _}
+    "." {TDot _}
     string {TString $$ _}
     int {TInt $$ _}
     true {TBool True _}
@@ -43,17 +41,20 @@ import AST
 
 %%
 
-ast : import many(importExpr) {AST $1 [] [] [] []}
-importExpr : TIdentifier TString {AliasedImport $1 $2}
-    | TString {UnaliasedImport $1}
-
+ast : import many(importExpr, ",") {AST [] [] [] (ValueExpr (ValueBool True)) []}
+importExpr : identifier string {AliasedImport $1 $2}
+    | string {UnaliasedImport $1}
 
 many(p,s) : p            { [$1] }
-          | many(p,s) s space p  { $4:$1 }
-
-any(p,s) :   { [] }
-         | p            { [$1] }
-         | many(p,s) s space p { $4:$1 }
+          | many(p,s) s p  { $3:$1 }
 
 opt(p) : p { Just $1 }
       |   { Nothing }
+
+{
+
+parseError :: [Token] -> a
+parseError tokens = error $ "Parse error at token: " ++ show token ++ "\nAt position: "
+      where
+            token = head tokens
+}
