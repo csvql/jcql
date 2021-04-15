@@ -1,4 +1,4 @@
-module AST where
+module AST(Query(..),Import(..),Join(..),SelectItem(..),Expr(..),Value(..),BinaryOpType(..),UnaryOpType(..)) where
 
 data Query
   = AST [Import] -- import (...)
