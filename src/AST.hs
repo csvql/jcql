@@ -1,11 +1,10 @@
 module AST where
 
-data Query
-  = AST [Import] -- import (...)
-    Identifier -- take {{identifier}}
-    [Join] -- join (...)
-    Filter -- filter 
-    Select -- select
+data Query = AST [Import] -- import (...)
+                          Identifier -- take {{identifier}}
+                                     [Join] -- join (...)
+                                            Filter -- filter 
+                                                   Select -- select
 
 data Import =
   AliasedImport Identifier Location
@@ -20,6 +19,7 @@ type Location = String
 type Identifier = String
 type Filter = Expr
 type Select = [SelectItem]
+
 data SelectItem =
   SelectExpr Expr
   | QualifiedWildcard Identifier
@@ -39,7 +39,6 @@ data Value =
     | ValueInt Int
     | ValueBool Bool
     deriving (Show,Eq)
-
 
 data BinaryOpType =
   EQ
