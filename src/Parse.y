@@ -41,7 +41,7 @@ import AST
 
 %%
 
-ast : import many(importExpr, ",") {AST [] [] [] (ValueExpr (ValueBool True)) []}
+ast : import many(importExpr, ",") take identifier {AST $2 $4 [] (ValueExpr (ValueBool True)) []}
 importExpr : identifier string {AliasedImport $1 $2}
     | string {UnaliasedImport $1}
 
