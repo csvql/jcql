@@ -16,10 +16,11 @@ import           Data.Map                       ( Map
 import           Data.Maybe
 
 -- Row defines a single row
-type Row = Map String [String]
-type TableContents = (String, [[String]])
+type Row = Map Identifier [String]
+type Table = [Row]
+type TableMap = Map Identifier [Row]
 type Column = (Int, [String])
-type DecodedSelect = [TableContents] -> [String]
+-- type DecodedSelect = [TableContents] -> [String]
 
 -- Result Monad Implementation
 data Result v =
@@ -47,32 +48,42 @@ instance Monad Result where
 
 ----------------------------------------------------
 evalQuery :: Query -> IO [[String]]
-evalQuery _ = return [[]]
+-- TODO: convert imports to a Map
+evalQuery (AST imports table joins (Just filter) select) = do
+  tables <- importCSV imports
+  let tableMap      = fromList tables
+      chosenTable   = Data.Map.lookup table tableMap
+      joinedTable   = performJoins tableMap joinedTable joins
+      filteredTable = filterTable joinedTable filter >>= \x -> return x
+  return [[]]
 
 -- Parsing CSV's
 ----------------------------------------------------
 -- Importing the given csv files into list of pairs containing the name of the file 
 -- and the unparsed csv. The name is either derived or used if explicitly stated
 -- TODO: Are we reading just file name without extension or with .csv extension? I assume now with 
-importCSV :: [Import] -> IO [(Identifier, [[String]])]
+importCSV :: [Import] -> IO [(Identifier, [Row])]
 importCSV []                              = return []
 importCSV ((AliasedImport id loc) : rest) = do
   file <- readFile loc
-  let parsedFile = unparseCsv file
+  let rows = createRows (unparseCsv file) id
   rest <- importCSV rest
-  return $ (id, parsedFile) : rest
+  return $ (id, rows) : rest
 -- TODO: better implicit check on file name
 importCSV ((UnaliasedImport loc) : rest) = do
   file <- readFile loc
-  let parsedFile = unparseCsv file
-  let id         = takeWhile (/= '.') loc -- Not allowing . other than for extension
+  let id   = takeWhile (/= '.') loc -- Not allowing . other than for extension
+  let rows = createRows (unparseCsv file) id
   rest <- importCSV rest
-  return $ (id, parsedFile) : rest
+  return $ (id, rows) : rest
 
 unparseCsv :: String -> [[String]]
 unparseCsv l =
   let line = lines l
   in  let lists = map (splitOn ",") line in map (map trim) lists
+
+createRows :: [[String]] -> Identifier -> [Row]
+createRows table name = [ fromList [(name, row)] | row <- table ]
 
 -- Remove any trailing space
 trim :: String -> String
@@ -82,6 +93,15 @@ trim = f . f where f = reverse . dropWhile isSpace
 -- Joins
 -- TODO: update it to use the Result Monad
 ----------------------------------------------------
+performJoins :: TableMap -> Table -> [Join] -> Table
+performJoins _      final []                     = final
+performJoins tables table (Inner id exp : joins) = performJoins tables
+                                                                join
+                                                                joins
+  where join = innerJoin table (fromJust $ Data.Map.lookup id tables) exp
+performJoins tables table (Cross id : joins) = performJoins tables join joins
+  where join = crossJoin table (fromJust $ Data.Map.lookup id tables)
+
 -- crossJoin joins two tables together
 crossJoin :: [Row] -> [Row] -> [Row]
 crossJoin xs ys = [ x `mergeMap` y | x <- xs, y <- ys ]
@@ -94,6 +114,21 @@ innerJoin t1 t2 e =
   , let row = findRow [ a `mergeMap` r | a <- t2 ] e
   , isJust row
   ]
+----------------------------------------------------
+
+-- Filter
+----------------------------------------------------
+filterTable :: Table -> Expr -> Result Table
+filterTable table expr = do
+  evaledExpr <- unwrap $ map (evalExpr expr) table
+  let zipped = zip evaledExpr table
+  return $ [ row | (validity, row) <- zipped, isValid validity ]
+
+isValid :: Value -> Bool
+isValid (ValueBool True ) = True
+isValid (ValueBool False) = False
+
+
 ----------------------------------------------------
 
 -- Evaluating expression
