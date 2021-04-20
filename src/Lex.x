@@ -27,7 +27,7 @@ tokens :-
 <0> true { \p _ -> TBool True p}
 <0> false { \p _ -> TBool False p}
 
-<0> import|take|join|inner|cross|on|case|when|then|else|end { \p s -> TKeyword s p }
+<0> import|take|join|inner|cross|on|case|when|then|else|end|where|select { \p s -> TKeyword s p }
 
 <0> \(|\)|\[|\]  { mkBracket }
 <0> \.    { \p _ -> TDot p }

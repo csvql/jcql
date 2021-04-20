@@ -100,6 +100,8 @@ lexKeywords =
   , "then"
   , "else"
   , "end"
+  , "where"
+  , "select"
   ]
 
 
