@@ -10,7 +10,7 @@ $digit = 0-9
 $alpha = [a-zA-Z]
 
 @identifier = $alpha [a-zA-Z0-9_]*
-@int     = $digit*
+@int     = $digit+
 
 @compare = [\>\<][\=]?
 
