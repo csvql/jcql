@@ -27,8 +27,11 @@ import AST
     '/' {TOperator "/" _}
     '^' {TOperator "^" _}
     '%' {TOperator "%" _}
+    '*' {TOperator "*" _}
     '>' {TOperator ">" _}
     '<' {TOperator "<" _}
+    '>=' {TOperator ">=" _}
+    '<=' {TOperator "<=" _}
     not {TOperator "not" _}
     or {TOperator "or" _}
     and {TOperator "and" _}
@@ -42,6 +45,13 @@ import AST
     false {TBool False _}
     identifier {TIdentifier $$ _}
 
+
+%left '*' '/' '^' '%'
+%left '+' '-'
+%nonassoc '=' '<' '>' '<=' '>='
+%left not
+%left and
+%left or
 %%
 
 ast : import many(importExpr, ',') take identifier any(joinExpr, ',') filter {AST $2 $4 $5 $6 []}
@@ -59,11 +69,11 @@ expr : atom binaryOp expr {BinaryOpExpr $1 $2 $3}
     | expr0 {$1}
 
 expr0 : unaryOp expr {UnaryOpExpr $1 $2}
-    | identifier '(' many(expr,',') ')' {Function $1 $3}
     | atom {$1}
 
 atom : identifier '.' int {TableColumn $1 $3}
     | value {ValueExpr $1}
+    | identifier '(' many(expr,',') ')' {Function $1 $3}
 
 value : string {ValueString $1}
     | int {ValueInt $1}
@@ -73,7 +83,11 @@ binaryOp : '+' {Sum}
     | and {AND}
     | or {OR}
     | '=' {AST.EQ}
-    --'*' {Product}
+    | '>' {AST.GT}
+    | '<' {AST.LT}
+    | '>=' {GEQ}
+    | '<=' {LEQ}
+    | '*' {Product}
 
 unaryOp : not {NOT}
 
