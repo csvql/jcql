@@ -27,16 +27,16 @@ testParser =
         ],
         testGroup "join" 
         [
+            testCase "no join" (parse "import A 'a.csv', B 'b.csv' take A" @?= AST [AliasedImport "B" "b.csv", AliasedImport "A" "a.csv"] "A" [] Nothing []),
             testCase "cross join" (parse "import A 'a.csv', B 'b.csv' take A cross join B" @?= AST [AliasedImport "B" "b.csv", AliasedImport "A" "a.csv"] "A" [Cross "B"] Nothing []),
             testCase "inner join with equals" (parse "import A 'a.csv', B 'b.csv' take A inner join B on A.1 = B.1" @?= AST [AliasedImport "B" "b.csv", AliasedImport "A" "a.csv"] "A" [Inner "B" (BinaryOpExpr (TableColumn "A" 1) AST.EQ (TableColumn "B" 1))] Nothing []),
             testCase "inner join with equals" (parse "import A 'a.csv', B 'b.csv', C 'c.csv' take A inner join B on A.1 = B.1, cross join C" @?= AST [AliasedImport "C" "c.csv", AliasedImport "B" "b.csv", AliasedImport "A" "a.csv"] "A" [Cross "C", Inner "B" (BinaryOpExpr (TableColumn "A" 1) AST.EQ (TableColumn "B" 1))] Nothing [])
         ],
         testGroup "filter" 
         [
-            testCase "cross join" (parse "import A 'a.csv', B 'b.csv' take A cross join B where a.1 not null" @?= AST [AliasedImport "B" "b.csv", AliasedImport "A" "a.csv"] "A" [Cross "B"] Nothing [])
+            testCase "unary operator" (parse "import A 'a.csv', B 'b.csv' take A cross join B where a.1 = 0" @?= AST [AliasedImport "B" "b.csv", AliasedImport "A" "a.csv"] "A" [Cross "B"] (Just (UnaryOpExpr NOT (ValueExpr (ValueString "null")))) []),
+            testCase "binary operator" (parse "import A 'a.csv', B 'b.csv' take A cross join B where a.1 = 0" @?= AST [AliasedImport "B" "b.csv", AliasedImport "A" "a.csv"] "A" [Cross "B"] (Just (BinaryOpExpr (TableColumn "a" 1) AST.EQ (ValueExpr (ValueInt 0)))) [])
         ]
-        
-
     ]
 
 parse :: String -> Query

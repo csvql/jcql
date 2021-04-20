@@ -19,6 +19,7 @@ import AST
     then {TKeyword "then" _}
     else {TKeyword "else" _}
     end {TKeyword "end" _}
+    where {TKeyword "where" _}
     '=' {TOperator "=" _}
     '==' {TOperator "==" _}
     '-' {TOperator "-" _}
@@ -51,14 +52,14 @@ importExpr : identifier string {AliasedImport $1 $2}
 joinExpr : cross join identifier {Cross $3}
     | inner join identifier on expr {Inner $3 $5}
 
-filter : expr {Just $1}
+filter : where expr {Just $2}
     |   {Nothing}
 
 expr : identifier '.' int {TableColumn $1 $3}
     | value {ValueExpr $1}
     | expr binaryOp expr {BinaryOpExpr $1 $2 $3}
     | unaryOp expr {UnaryOpExpr $1 $2}
-    | '.' identifier '(' many(expr,',') ')' {Function $2 $4}
+    | identifier '(' many(expr,',') ')' {Function $1 $3}
 
 value : string {ValueString $1}
     | int {ValueInt $1}
