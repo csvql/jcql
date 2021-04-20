@@ -35,6 +35,7 @@ tokens :-
 <0> @single_str|@double_str { \p s -> TString (strip_quotes s) p}
 <0> @int                    { \p s -> TInt (read s) p }
 <0> @identifier             { \p s -> TIdentifier s p }
+<0> \*             { \p _ -> TAsterisk p }
 
 
 {
@@ -49,6 +50,7 @@ str (TIdentifier c _) = c
 str (TKeyword c _) = c
 str (TBracket c _) = c
 str (TInt i _)        = show i
+str (TAsterisk _) = "*"
 
 data Token = 
   TIdentifier String AlexPosn
@@ -60,6 +62,7 @@ data Token =
   | TString String AlexPosn
   | TInt Int AlexPosn
   | TBool Bool AlexPosn
+  | TAsterisk AlexPosn
   | TArrow AlexPosn
   deriving (Eq,Show)
 }
