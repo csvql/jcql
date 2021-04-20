@@ -8,6 +8,7 @@ import Parse
 import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Test.Tasty.QuickCheck as QC
+import Data.Maybe (fromJust)
 
 testParser :: TestTree
 testParser =
@@ -37,10 +38,30 @@ testParser =
             testCase "unary operator" (parse "import A 'a.csv', B 'b.csv' take A cross join B where not 0" @?= AST [AliasedImport "B" "b.csv", AliasedImport "A" "a.csv"] "A" [Cross "B"] (Just (UnaryOpExpr NOT (ValueExpr (ValueInt 0)))) []),
             testCase "binary operator" (parse "import A 'a.csv', B 'b.csv' take A cross join B where a.1 = 0" @?= AST [AliasedImport "B" "b.csv", AliasedImport "A" "a.csv"] "A" [Cross "B"] (Just (BinaryOpExpr (TableColumn "a" 1) AST.EQ (ValueExpr (ValueInt 0)))) []),
             testCase "function" (parse "import A 'a.csv', B 'b.csv' take A cross join B where Coalesce(a.1,a.2)" @?= AST [AliasedImport "B" "b.csv", AliasedImport "A" "a.csv"] "A" [Cross "B"] (Just (Function "Coalesce" [TableColumn "a" 2,TableColumn "a" 1])) []),
-            testCase "function and unary operator" (parse "import A 'a.csv', B 'b.csv' take A cross join B where Len(a.1) = 0" @?= AST [AliasedImport "B" "b.csv", AliasedImport "A" "a.csv"] "A" [Cross "B"] (Just (BinaryOpExpr (Function "Len" [TableColumn "a" 1]) AST.EQ (ValueExpr (ValueInt 0)))) []),
-            testCase "test precedence" (parse "import A 'a.csv', B 'b.csv' take A cross join B where a.1 + a.2 = 0" @?= AST [AliasedImport "B" "b.csv", AliasedImport "A" "a.csv"] "A" [Cross "B"] (Just (BinaryOpExpr (TableColumn "a" 1) Sum (BinaryOpExpr (TableColumn "a" 2) AST.EQ (ValueExpr (ValueInt 0))))) [])
-        ]
+            testCase "function and unary operator" (parse "import A 'a.csv', B 'b.csv' take A cross join B where Len(a.1) = 0" @?= AST [AliasedImport "B" "b.csv", AliasedImport "A" "a.csv"] "A" [Cross "B"] (Just (BinaryOpExpr (Function "Len" [TableColumn "a" 1]) AST.EQ (ValueExpr (ValueInt 0)))) [])
+        ],
+        testGroup "expression" [
+            testCase "equality precedence" $ parseExpr "0+1=2" @?= "(0+1)=2"
+        ]      
     ]
 
 parse :: String -> Query
 parse = parseJCQL . alexScanTokens
+
+parseExpr :: String -> String
+parseExpr s = (init . tail) $ printExpr $ getExpr ast
+    where ast = parse ("import 'a.csv' take a where "++s)
+          getExpr (AST _ _ _ f _) = fromJust f
+
+printExpr e = case e of
+    BinaryOpExpr left op right -> "("++printExpr left++printBOP op++printExpr right++")"
+    ValueExpr v -> printValue v
+
+printBOP :: BinaryOpType -> String
+printBOP op = case op of
+ AST.EQ -> "="
+ Sum  -> "+"
+    
+printValue :: Value -> String 
+printValue v = case v of
+    ValueInt i -> show i
