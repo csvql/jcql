@@ -18,21 +18,23 @@ import AST
     when {TKeyword "when" _}
     then {TKeyword "then" _}
     else {TKeyword "else" _}
-    and {TKeyword "and" _}
-    "=" {TOperator "=" _}
-    "==" {TOperator "==" _}
-    "-" {TOperator "-" _}
-    "+" {TOperator "+" _}
-    "/" {TOperator "/" _}
-    "^" {TOperator "^" _}
-    "%" {TOperator "%" _}
-    compare {TOperator "compare" _}
+    end {TKeyword "end" _}
+    '=' {TOperator "=" _}
+    '==' {TOperator "==" _}
+    '-' {TOperator "-" _}
+    '+' {TOperator "+" _}
+    '/' {TOperator "/" _}
+    '^' {TOperator "^" _}
+    '%' {TOperator "%" _}
+    '>' {TOperator ">" _}
+    '<' {TOperator "<" _}
     not {TOperator "not" _}
     or {TOperator "or" _}
-    "(" {TBracket "(" _}
-    ")" {TBracket ")" _}
-    "," {TComma _}
-    "." {TDot _}
+    and {TOperator "and" _}
+    '(' {TBracket "(" _}
+    ')' {TBracket ")" _}
+    ',' {TComma _}
+    '.' {TDot _}
     string {TString $$ _}
     int {TInt $$ _}
     true {TBool True _}
@@ -41,16 +43,44 @@ import AST
 
 %%
 
-ast : import many(importExpr, ",") take identifier {AST $2 $4 [] (ValueExpr (ValueBool True)) []}
+ast : import many(importExpr, ',') take identifier any(joinExpr, ',') filter {AST $2 $4 $5 $6 []}
+
 importExpr : identifier string {AliasedImport $1 $2}
     | string {UnaliasedImport $1}
 
+joinExpr : cross join identifier {Cross $3}
+    | inner join identifier on expr {Inner $3 $5}
+
+filter : expr {Just $1}
+    |   {Nothing}
+
+expr : identifier '.' int {TableColumn $1 $3}
+    | value {ValueExpr $1}
+    | expr binaryOp expr {BinaryOpExpr $1 $2 $3}
+    | unaryOp expr {UnaryOpExpr $1 $2}
+    | '.' identifier '(' many(expr,',') ')' {Function $2 $4}
+
+value : string {ValueString $1}
+    | int {ValueInt $1}
+
+binaryOp : '+' {Sum}
+    | '-' {Difference}
+    | and {AND}
+    | or {OR}
+    | '=' {AST.EQ}
+    --'*' {Product}
+
+unaryOp : not {NOT}
+
 many(p,s) : p            { [$1] }
-          | many(p,s) s p  { $3:$1 }
+    | many(p,s) s p  { $3:$1 }
 
 opt(p) : p { Just $1 }
-      |   { Nothing }
+    |   { Nothing }
 
+any(p,s) :   { [] }
+    | p            { [$1] }
+    | many(p,s) s p { $3:$1 }
 {
 
 parseError :: [Token] -> a

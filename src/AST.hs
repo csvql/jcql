@@ -4,7 +4,7 @@ data Query
   = AST [Import] -- import (...)
     Identifier -- take {{identifier}}
     [Join] -- join (...)
-    Filter -- filter 
+    (Maybe Filter) -- filter 
     Select -- select
     deriving (Show, Eq)
 
@@ -43,7 +43,6 @@ data Value =
     | ValueInt Int
     | ValueBool Bool
     deriving (Show,Eq)
-
 
 data BinaryOpType =
   EQ
