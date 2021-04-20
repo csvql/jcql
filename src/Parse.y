@@ -20,6 +20,7 @@ import AST
     else {TKeyword "else" _}
     end {TKeyword "end" _}
     where {TKeyword "where" _}
+    select {TKeyword "select" _}
     '=' {TOperator "=" _}
     '==' {TOperator "==" _}
     '-' {TOperator "-" _}
@@ -27,7 +28,7 @@ import AST
     '/' {TOperator "/" _}
     '^' {TOperator "^" _}
     '%' {TOperator "%" _}
-    '*' {TOperator "*" _}
+    '*' {TAsterisk _}
     '>' {TOperator ">" _}
     '<' {TOperator "<" _}
     '>=' {TOperator ">=" _}
@@ -45,16 +46,16 @@ import AST
     false {TBool False _}
     identifier {TIdentifier $$ _}
 
-
-%left '*' '/' '^' '%'
-%left '+' '-'
 %nonassoc '=' '<' '>' '<=' '>='
-%left not
-%left and
-%left or
+%right '*' '/' '^' '%'
+%right '+' '-'
+%right not
+%right and
+%right or
+%nonassoc true false
 %%
 
-ast : import many(importExpr, ',') take identifier any(joinExpr, ',') filter {AST $2 $4 $5 $6 []}
+ast : import many(importExpr, ',') take identifier any(joinExpr, ',') filter select many(selectItems,',') {AST $2 $4 $5 $6 $8}
 
 importExpr : identifier string {AliasedImport $1 $2}
     | string {UnaliasedImport $1}
@@ -64,6 +65,10 @@ joinExpr : cross join identifier {Cross $3}
 
 filter : where expr {Just $2}
     |   {Nothing}
+
+selectItems : '*' {Wildcard}
+    | identifier '.' '*' {QualifiedWildcard $1}
+    | expr {SelectExpr $1}
 
 expr : atom binaryOp expr {BinaryOpExpr $1 $2 $3}
     | expr0 {$1}
@@ -78,11 +83,11 @@ atom : identifier '.' int {TableColumn $1 $3}
 value : string {ValueString $1}
     | int {ValueInt $1}
 
-binaryOp : '+' {Sum}
+binaryOp : '=' {AST.EQ}
+    |'+' {Sum}
     | '-' {Difference}
     | and {AND}
     | or {OR}
-    | '=' {AST.EQ}
     | '>' {AST.GT}
     | '<' {AST.LT}
     | '>=' {GEQ}
