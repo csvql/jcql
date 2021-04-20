@@ -55,11 +55,15 @@ joinExpr : cross join identifier {Cross $3}
 filter : where expr {Just $2}
     |   {Nothing}
 
-expr : identifier '.' int {TableColumn $1 $3}
-    | value {ValueExpr $1}
-    | expr binaryOp expr {BinaryOpExpr $1 $2 $3}
-    | unaryOp expr {UnaryOpExpr $1 $2}
+expr : atom binaryOp expr {BinaryOpExpr $1 $2 $3}
+    | expr0 {$1}
+
+expr0 : unaryOp expr {UnaryOpExpr $1 $2}
     | identifier '(' many(expr,',') ')' {Function $1 $3}
+    | atom {$1}
+
+atom : identifier '.' int {TableColumn $1 $3}
+    | value {ValueExpr $1}
 
 value : string {ValueString $1}
     | int {ValueInt $1}
