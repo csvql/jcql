@@ -11,6 +11,7 @@ import           Data.Map                       ( Map
                                                 , fromList
                                                 , lookup
                                                 , singleton
+                                                , toList
                                                 , unionWith
                                                 )
 import           Data.Maybe
@@ -47,35 +48,46 @@ instance Monad Result where
   return v = Ok v
 
 ----------------------------------------------------
-evalQuery :: Query -> IO [[String]]
--- TODO: convert imports to a Map
-evalQuery (AST imports table joins (Just filter) select) = do
-  tables <- importCSV imports
-  let tableMap      = fromList tables
-      chosenTable   = Data.Map.lookup table tableMap
-      joinedTable   = performJoins tableMap joinedTable joins
-      filteredTable = filterTable joinedTable filter >>= \x -> return x
-  return [[]]
+-- evalQuery :: Query -> IO [[String]]
+-- -- TODO: convert imports to a Map
+-- evalQuery (AST imports table joins (Just filter) select) = do
+--   tables <- importCSV imports
+--   let tableMap      = fromList tables
+--       chosenTable   = Data.Map.lookup table tableMap
+--       joinedTable   = performJoins tableMap joinedTable joins
+--       filteredTable = filterTable joinedTable filter >>= \x -> return x
+--   return [[]]
 
 -- Parsing CSV's
 ----------------------------------------------------
 -- Importing the given csv files into list of pairs containing the name of the file 
 -- and the unparsed csv. The name is either derived or used if explicitly stated
 -- TODO: Are we reading just file name without extension or with .csv extension? I assume now with 
-importCSV :: [Import] -> IO [(Identifier, [Row])]
+importCSV :: [Import] -> IO [Result (Identifier, [Row])]
 importCSV []                              = return []
-importCSV ((AliasedImport id loc) : rest) = do
+importCSV ((AliasedImport id loc) : rest) = do -- TODO: For now the check of the name of the file only matters at implicit naming
   file <- readFile loc
   let rows = createRows (unparseCsv file) id
   rest <- importCSV rest
-  return $ (id, rows) : rest
+  return $ Ok (id, rows) : rest
 -- TODO: better implicit check on file name
 importCSV ((UnaliasedImport loc) : rest) = do
   file <- readFile loc
-  let id   = takeWhile (/= '.') loc -- Not allowing . other than for extension
+  let id   = takeWhile (/= '.') (last $ splitOn "/" loc)
   let rows = createRows (unparseCsv file) id
   rest <- importCSV rest
-  return $ (id, rows) : rest
+  let verifiedPair =
+        checkCharSet id >>= \verifiedId -> return (verifiedId, rows)
+  return $ verifiedPair : rest
+
+checkCharSet :: String -> Result String
+checkCharSet [] = return []
+checkCharSet (c : cs)
+  | isAlpha c || c == '_' || isNumber c = do
+    rest <- checkCharSet cs
+    return (c : rest)
+  | otherwise = Error "illegal characters used in the import"
+
 
 unparseCsv :: String -> [[String]]
 unparseCsv l =
@@ -118,6 +130,7 @@ innerJoin t1 t2 e =
 
 -- Filter
 ----------------------------------------------------
+-- TODO, important that only certain types of filters should be allowed
 filterTable :: Table -> Expr -> Result Table
 filterTable table expr = do
   evaledExpr <- unwrap $ map (evalExpr expr) table
@@ -127,6 +140,23 @@ filterTable table expr = do
 isValid :: Value -> Bool
 isValid (ValueBool True ) = True
 isValid (ValueBool False) = False
+----------------------------------------------------
+
+-- Selection
+----------------------------------------------------
+select :: Select -> Table -> [[String]]
+select [] _ = []
+select (Wildcard : rest) table =
+  map (foldr1 (++) . map snd . toList) table ++ select rest table
+-- TODO: Not sure about this one, can't really think of a good way to do select
+select (QualifiedWildcard name : rest) table =
+  map (fromJust . Data.Map.lookup name) table ++ select rest table
+select (SelectExpr expr : rest) table = case expr of
+  TableColumn name num ->
+    map (fromJust . getColumn (name, num)) table : select rest table
+  ValueExpr _    -> error "Type Error" -- TODO, convert it to monad
+  BinaryOpExpr{} -> error "Type Error"
+  UnaryOpExpr{}  -> error "Type Error"
 
 
 ----------------------------------------------------
@@ -139,7 +169,7 @@ isValid (ValueBool False) = False
 evalExpr :: Expr -> Row -> Result Value
 evalExpr expr row = case expr of
   ValueExpr v         -> Ok v
-  TableColumn tbl col -> case getColumn row (tbl, col) of
+  TableColumn tbl col -> case getColumn (tbl, col) row of
     Just v  -> Ok (ValueString v)
     Nothing -> Error "table not found"
   BinaryOpExpr l op r -> do
@@ -297,8 +327,8 @@ findRow rows expr = do
   if null filtered then Nothing else Just $ head filtered
 
 -- getColumn gets a column by table name and column index (starting from 0)
-getColumn :: Row -> (String, Int) -> Maybe String
-getColumn row (key, i) = case Data.Map.lookup key row of
+getColumn :: (String, Int) -> Row -> Maybe String
+getColumn (key, i) row = case Data.Map.lookup key row of
   Nothing      -> Nothing -- table name not found
   Just columns -> if i < length columns then Just (columns !! i) else Nothing
 
