@@ -4,6 +4,7 @@ module InterpreterSpec
 import           Data.Map                       ( Map
                                                 , empty
                                                 , fromList
+                                                , lookup
                                                 , singleton
                                                 )
 import           Test.Tasty
@@ -11,12 +12,49 @@ import           Test.Tasty.HUnit
 import qualified Test.Tasty.QuickCheck         as QC
 
 import           AST
+import           Data.Maybe
 import           Interpreter
 
 testInterpreter :: TestTree
 testInterpreter = testGroup
   "Interpreter"
   [ testGroup
+    "importing CSV"
+    [ testGroup
+      "valid CSV"
+      [ testCase "Simple Aliased Import" $ do
+        csv <- importCSV [AliasedImport "user" "./testCsv/user.csv"]
+        csv @?= [Ok ("user", users)]
+      , testCase "Simple Unaliased Import" $ do
+        csv <- importCSV [UnaliasedImport "./testCsv/user.csv"]
+        csv @?= [Ok ("user", users)]
+      ]
+    , testGroup
+      "multipleCSV's"
+      [ testCase "Two Aliased Imports" $ do
+        csv <- importCSV
+          [ AliasedImport "user"    "./testCsv/user.csv"
+          , AliasedImport "country" "./testCsv/country.csv"
+          ]
+        csv @?= [Ok ("user", users), Ok ("country", countries)]
+      , testCase "Two Unaliased Imports" $ do
+        csv <- importCSV
+          [ UnaliasedImport "./testCsv/user.csv"
+          , UnaliasedImport "./testCsv/country.csv"
+          ]
+        csv @?= [Ok ("user", users), Ok ("country", countries)]
+      ]
+    , testGroup
+      "Invalid CSV"
+      [ testCase "Import with a weird name" $ do
+          csv <- importCSV [UnaliasedImport "./testCsv/b$d.csv"]
+          let throwsError = case head csv of
+                Ok    _ -> False
+                Error _ -> True
+          throwsError @?= True
+      ]
+    ]
+  , testGroup
     "evalExpr"
     [ testGroup
       "TableColumn"
@@ -687,6 +725,32 @@ testInterpreter = testGroup
               [("country", ["GB", "66"]), ("user", ["1", "Ryan", "GB"])]
             , fromList [("country", ["PL", "38"]), ("user", ["2", "Dom", "PL"])]
             ]
+        , testCase "Multiple Joins"
+        $   performJoins
+              tableMap
+              users
+              [ Inner
+                "user"
+                (BinaryOpExpr (TableColumn "user" 1) AST.EQ (TableColumn "user" 1)
+                )
+              , Inner
+                "country"
+                (BinaryOpExpr (TableColumn "user" 2)
+                              AST.EQ
+                              (TableColumn "country" 0)
+                )
+              ]
+        @?= [ fromList
+              [ ("user"   , ["1", "Ryan", "GB"])
+              , ("user"   , ["1", "Ryan", "GB"])
+              , ("country", ["GB", "66"])
+              ]
+            , fromList
+              [ ("user"   , ["2", "Dom", "PL"])
+              , ("user"   , ["2", "Dom", "PL"])
+              , ("country", ["PL", "38"])
+              ]
+            ]
         , testCase "findRow valid query"
         $   findRow
               users
@@ -707,11 +771,15 @@ testInterpreter = testGroup
     ]
   ]
 
+-- TODO: innerjoin has to be based on equating both expressions values!
+users :: [Row]
 users =
   [ fromList [("user", ["1", "Ryan", "GB"])]
   , fromList [("user", ["2", "Dom", "PL"])]
   , fromList [("user", ["3", "Aleksei", "RU"])]
   ]
+
+tableMap = fromList [("user", users), ("country", countries)]
 
 countries =
   [fromList [("country", ["GB", "66"])], fromList [("country", ["PL", "38"])]]
