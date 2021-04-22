@@ -6,6 +6,7 @@ import           Data.Map                       ( Map
                                                 , fromList
                                                 , lookup
                                                 , singleton
+                                                , toList
                                                 )
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -769,6 +770,130 @@ testInterpreter = testGroup
         @?= Nothing
         ]
     ]
+  , testGroup
+    "Select"
+    [ testGroup
+      "Selecting Single Selections"
+      [ testCase "Wildcard" $ case select [Wildcard] joinedTable of
+        Ok    result -> result @?= convert joinedTable
+        Error _      -> assertFailure "Failed to return selection"
+      , testCase "QualifiedWildcard for table A"
+        $ case select [QualifiedWildcard "A"] joinedTable of
+            Ok    result -> result @?= convert tableA
+            Error _      -> assertFailure "Failed to return selection"
+      , testCase "QualifiedWildcard for table B"
+        $ case select [QualifiedWildcard "B"] joinedTable of
+            Ok    result -> result @?= convert tableB
+            Error _      -> assertFailure "Failed to return selection"
+      , testGroup
+        "Testing different expressions (correct)"
+        [ testCase "Picking a particular column"
+          $ case select [SelectExpr (TableColumn "A" 0)] joinedTable of
+              Ok result -> result @?= convert
+                [ fromList [("A", ["Hi"])]
+                , fromList [("A", ["Hi"])]
+                , fromList [("A", ["Welcome"])]
+                , fromList [("A", ["Welcome"])]
+                , fromList [("A", ["Greetings"])]
+                , fromList [("A", ["Greetings"])]
+                ]
+              Error _ -> assertFailure "Failed to return selection"
+        , testCase "Just an arbitrary string column"
+          $ case
+              select [SelectExpr (ValueExpr (ValueString "0"))] joinedTable
+            of
+              Ok result ->
+                result
+                  @?= [ [ValueString "0"]
+                      , [ValueString "0"]
+                      , [ValueString "0"]
+                      , [ValueString "0"]
+                      , [ValueString "0"]
+                      , [ValueString "0"]
+                      ]
+              Error _ -> assertFailure "Failed to return selection"
+        , testCase "COALESCE function" -- Note that I'm not testing the actual COALESCE function, just in this context
+          $ case
+              select
+                [ SelectExpr
+                    (Function "COALESCE" [TableColumn "A" 0, TableColumn "B" 0])
+                ]
+                joinedTable
+            of
+              Ok result -> result @?= convert
+                [ fromList [("A", ["Hi"])]
+                , fromList [("A", ["Hi"])]
+                , fromList [("A", ["Welcome"])]
+                , fromList [("A", ["Welcome"])]
+                , fromList [("A", ["Greetings"])]
+                , fromList [("A", ["Greetings"])]
+                ]
+        ]
+      , testGroup
+        "Testing different expressions (invalid Type)"
+        [ testCase "Boolean Value used in expression"
+          $ case select [SelectExpr (ValueExpr (ValueBool True))] joinedTable of
+              Ok    _ -> assertFailure "Can't allow boolean type"
+              Error _ -> True @?= True
+        , testCase "Integer Value used in expression"
+          $ case select [SelectExpr (ValueExpr (ValueInt 3))] joinedTable of
+              Ok    _ -> assertFailure "Can't allow integer type"
+              Error _ -> True @?= True
+        ]
+      ]
+    , testGroup
+      "Multiple Selections"
+      [ testCase "Multiple Wildcards"
+        $ case select [Wildcard, Wildcard] joinedTable of
+            Ok    result -> result @?= convert' joinedTable
+            Error _      -> assertFailure "Failed to return selection"
+      , testCase "Multiple Qualified Wildcards"
+        $ case
+            select [QualifiedWildcard "A", QualifiedWildcard "B"] joinedTable
+          of
+            Ok    result -> result @?= convert'' tableA tableB
+            Error _      -> assertFailure "Failed to return selection"
+      , testGroup
+        "Multiple Expressions Correct"
+        [ testCase "Multiple Column selections"
+          $ case
+              select
+                [SelectExpr (TableColumn "A" 0), SelectExpr (TableColumn "B" 0)]
+                joinedTable
+            of
+              Ok result ->
+                result
+                  @?= convert''
+                        [ fromList [("A", ["Hi"])]
+                        , fromList [("A", ["Hi"])]
+                        , fromList [("A", ["Welcome"])]
+                        , fromList [("A", ["Welcome"])]
+                        , fromList [("A", ["Greetings"])]
+                        , fromList [("A", ["Greetings"])]
+                        ]
+                        tableB
+              Error _ -> assertFailure "Failed to return selection"
+        , testCase "Multiple arbitrary Strings"
+          $ case
+              select
+                [ SelectExpr (ValueExpr (ValueString "OOO"))
+                , SelectExpr (ValueExpr (ValueString "NOO"))
+                ]
+                joinedTable
+            of
+              Ok result ->
+                result
+                  @?= [ [ValueString "OOO", ValueString "NOO"]
+                      , [ValueString "OOO", ValueString "NOO"]
+                      , [ValueString "OOO", ValueString "NOO"]
+                      , [ValueString "OOO", ValueString "NOO"]
+                      , [ValueString "OOO", ValueString "NOO"]
+                      , [ValueString "OOO", ValueString "NOO"]
+                      ]
+              Error _ -> assertFailure "Failed to return selection"
+        ]
+      ]
+    ]
   ]
 
 -- TODO: innerjoin has to be based on equating both expressions values!
@@ -783,6 +908,63 @@ tableMap = fromList [("user", users), ("country", countries)]
 
 countries =
   [fromList [("country", ["GB", "66"])], fromList [("country", ["PL", "38"])]]
+
+convert :: [Row] -> [[Value]]
+convert [] = []
+convert (row : rows) =
+  [ ValueString value | value <- (concatMap snd . toList) row ] : convert rows
+
+convert' :: [Row] -> [[Value]]
+convert' []           = []
+convert' (row : rows) = (conversion ++ conversion) : convert' rows
+ where
+  conversion = [ ValueString value | value <- (concatMap snd . toList) row ]
+
+convert'' :: [Row] -> [Row] -> [[Value]]
+convert'' [] _ = []
+convert'' (row' : rows') (row'' : rows'') =
+  (conversion' ++ conversion'') : convert'' rows' rows''
+ where
+  conversion' = [ ValueString value | value <- (concatMap snd . toList) row' ]
+  conversion'' =
+    [ ValueString value | value <- (concatMap snd . toList) row'' ]
+
+
+tableA =
+  [ fromList [("A", ["Hi", "Dear"])]
+  , fromList [("A", ["Hi", "Dear"])]
+  , fromList [("A", ["Welcome", "Kind"])]
+  , fromList [("A", ["Welcome", "Kind"])]
+  , fromList [("A", ["Greetings", "My"])]
+  , fromList [("A", ["Greetings", "My"])]
+  ]
+
+tableB =
+  [ fromList [("B", ["Earth"])]
+  , fromList [("B", ["World"])]
+  , fromList [("B", ["Earth"])]
+  , fromList [("B", ["World"])]
+  , fromList [("B", ["Earth"])]
+  , fromList [("B", ["World"])]
+  ]
+
+joinedTable =
+  [ fromList [("A", ["Hi", "Dear"]), ("B", ["Earth"])]
+  , fromList [("A", ["Hi", "Dear"]), ("B", ["World"])]
+  , fromList [("A", ["Welcome", "Kind"]), ("B", ["Earth"])]
+  , fromList [("A", ["Welcome", "Kind"]), ("B", ["World"])]
+  , fromList [("A", ["Greetings", "My"]), ("B", ["Earth"])]
+  , fromList [("A", ["Greetings", "My"]), ("B", ["World"])]
+  ]
+
+joinedTable' =
+  [ fromList [("A", ["Hi", "Dear"]), ("B", ["Earth"])]
+  , fromList [("A", ["Hi", "Dear"]), ("B", ["World"])]
+  , fromList [("A", ["Welcome", "Kind"]), ("B", ["Earth"])]
+  , fromList [("A", ["Welcome", "Kind"]), ("B", ["World"])]
+  , fromList [("A", ["Greetings", "My"]), ("B", ["Earth"])]
+  , fromList [("A", ["Greetings", "My"]), ("B", ["World"])]
+  ]
 
 evalErr :: Expr -> Row -> Bool
 evalErr expr row = case evalExpr expr row of
