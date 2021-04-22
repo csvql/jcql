@@ -9,6 +9,7 @@ import           Data.Map                       ( Map
                                                 , empty
                                                 , findWithDefault
                                                 , fromList
+                                                , keys
                                                 , lookup
                                                 , singleton
                                                 , toList
@@ -137,6 +138,7 @@ filterTable table expr = do
   let zipped = zip evaledExpr table
   return $ [ row | (validity, row) <- zipped, isValid validity ]
 
+-- TODO: what if another value?
 isValid :: Value -> Bool
 isValid (ValueBool True ) = True
 isValid (ValueBool False) = False
@@ -144,19 +146,51 @@ isValid (ValueBool False) = False
 
 -- Selection
 ----------------------------------------------------
-select :: Select -> Table -> [[String]]
-select [] _ = []
-select (Wildcard : rest) table =
-  map (foldr1 (++) . map snd . toList) table ++ select rest table
--- TODO: Not sure about this one, can't really think of a good way to do select
-select (QualifiedWildcard name : rest) table =
-  map (fromJust . Data.Map.lookup name) table ++ select rest table
-select (SelectExpr expr : rest) table = case expr of
-  TableColumn name num ->
-    map (fromJust . getColumn (name, num)) table : select rest table
-  ValueExpr _    -> error "Type Error" -- TODO, convert it to monad
-  BinaryOpExpr{} -> error "Type Error"
-  UnaryOpExpr{}  -> error "Type Error"
+-- select :: Select -> Table -> [[String]]
+-- select [] _ = []
+-- select (Wildcard : rest) table =
+--   map (foldr1 (++) . map snd . toList) table ++ select rest table
+-- -- TODO: Not sure about this one, can't really think of a good way to do select
+-- select (QualifiedWildcard name : rest) table =
+--   map (fromJust . Data.Map.lookup name) table ++ select rest table
+-- select (SelectExpr expr : rest) table = case expr of
+--   TableColumn name num ->
+--     map (fromJust . getColumn (name, num)) table : select rest table
+--   ValueExpr _    -> error "Type Error" -- TODO, convert it to monad
+--   BinaryOpExpr{} -> error "Type Error"
+--   UnaryOpExpr{}  -> error "Type Error"
+
+select :: Select -> Table -> Result [[Value]]
+select items []           = Ok []
+select items (row : rows) = do
+  let exprs = map (unwrapSelect row) items
+  newRow <- unwrap $ map (performSelect row) exprs
+  rest   <- select items rows
+  return (concat newRow : rest)
+
+unwrapSelect :: Row -> SelectItem -> [Expr]
+unwrapSelect row (QualifiedWildcard name) =
+  [ TableColumn name index
+  | index <- [0 .. length (fromJust $ Data.Map.lookup name row) - 1]
+  ]
+unwrapSelect _   (SelectExpr e) = [e]
+unwrapSelect row Wildcard       = concat
+  [ unwrapSelect row (QualifiedWildcard table) | table <- listTables ]
+  where listTables = keys row
+
+performSelect :: Row -> [Expr] -> Result [Value]
+performSelect _   []       = Ok []
+performSelect row (e : es) = do
+  value        <- evalExpr e row
+  checkedValue <- checkType value
+  rest         <- performSelect row es
+  return (checkedValue : rest)
+ where
+  checkType v = case v of
+    ValueString v -> Ok $ ValueString v
+    _             -> Error "Selection expressions can only have string"
+
+
 
 
 ----------------------------------------------------
