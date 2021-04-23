@@ -142,12 +142,13 @@ filterTable table expr = do
   zipped     <- unwrap $ zipWith (curry validityCheck) evaledExpr table
   return $ [ row | (validity, row) <- zipped, validity ]
 
+-- Basically unwraps a pair for simplicity sake
 validityCheck :: (Value, Row) -> Result (Bool, Row)
 validityCheck (val, row) = do
   valid <- isValid val
   return (valid, row)
 
--- TODO: what if another value?
+-- Only allows the condition in filtering to be of boolean value after evaluation
 isValid :: Value -> Result Bool
 isValid (ValueBool True ) = Ok True
 isValid (ValueBool False) = Ok False
@@ -164,6 +165,7 @@ select items (row : rows) = do
   rest   <- select items rows
   return (concat newRow : rest)
 
+-- Convert the select statements to expressions for simplicity
 unwrapSelect :: Row -> SelectItem -> [Expr]
 unwrapSelect row (QualifiedWildcard name) =
   [ TableColumn name index
@@ -174,6 +176,7 @@ unwrapSelect row Wildcard       = concat
   [ unwrapSelect row (QualifiedWildcard table) | table <- listTables ]
   where listTables = keys row
 
+-- Reconstruct the row based on the results of the expressions, which are the converted select Item
 performSelect :: Row -> [Expr] -> Result [Value]
 performSelect _   []       = Ok []
 performSelect row (e : es) = do
@@ -302,6 +305,7 @@ evalFn fn args = case fn of
     if null nonnull then Ok (ValueString "") else Ok (head nonnull)
 
 
+-- Specific type check depending on the type of the statement
 typeCheckCase :: [(Value, Value)] -> Value -> Result ()
 typeCheckCase ((ValueBool cond, ValueString stmt) : rest) def = typeCheckCase'
   rest
@@ -333,6 +337,7 @@ typeCheckCase ((ValueBool cond, ValueInt stmt) : rest) def = typeCheckCase'
 typeCheckCase _ _ = Error "Type Error"
 
 
+-- The function responsible for actual evaluation of the case statement
 evalCase :: [(Value, Value)] -> Value -> Result Value
 evalCase [] def = return def
 evalCase ((ValueBool cond, stmt) : rest) def | cond      = return stmt
@@ -340,6 +345,7 @@ evalCase ((ValueBool cond, stmt) : rest) def | cond      = return stmt
 
 -- Utility Functions
 
+-- Simple unwrap of a list of Result values into a result list of values
 unwrap :: [Result a] -> Result [a]
 unwrap []       = Ok []
 unwrap (r : rs) = do
