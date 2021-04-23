@@ -771,6 +771,49 @@ testInterpreter = testGroup
         ]
     ]
   , testGroup
+    "Filter"
+    [ testGroup
+      "Simple Filters"
+      [ testCase "Simply filter everything"
+        $ case filterTable joinedTable (ValueExpr (ValueBool True)) of
+            Ok    table -> table @?= joinedTable
+            Error _     -> assertFailure "Failed to return table"
+      , testCase "Simply remove everything"
+        $ case filterTable joinedTable (ValueExpr (ValueBool False)) of
+            Ok    table -> table @?= []
+            Error _     -> assertFailure "Failed to return table"
+      ]
+    , testGroup
+      "More Complicated Filters" -- TODO: Finish this test, the result will be wrong
+      [ testCase
+            "Filtering rows that have same 0th column matching in 2 joined tables"
+          $ case
+              filterTable
+                aJoinC
+                (BinaryOpExpr (TableColumn "A" 0) AST.EQ (TableColumn "C" 0))
+            of
+              Ok table ->
+                table
+                  @?= [ fromList [("A", ["Hi", "Dear"]), ("C", ["Hi", "Bye"])]
+                      , fromList
+                        [("A", ["Welcome", "Kind"]), ("C", ["Welcome", "Not"])]
+                      ]
+              Error a ->
+                assertFailure $ "Failed to return table, got error: " ++ a
+      ]
+    , testGroup
+      "Wrong Type Testing"
+      [ testCase "Trying to filter with string value for condition"
+        $ case filterTable joinedTable (ValueExpr (ValueString "Test")) of
+            Ok    _ -> assertFailure "There should be no resulting table"
+            Error _ -> True @?= True
+      , testCase "Trying to filter with integer value for condition"
+        $ case filterTable joinedTable (ValueExpr (ValueInt 3)) of
+            Ok    _ -> assertFailure "There should be no resulting table"
+            Error _ -> True @?= True
+      ]
+    ]
+  , testGroup
     "Select"
     [ testGroup
       "Selecting Single Selections"
@@ -938,6 +981,17 @@ tableA =
   , fromList [("A", ["Greetings", "My"])]
   , fromList [("A", ["Greetings", "My"])]
   ]
+tableC =
+  [fromList [("C", ["Hi", "Bye"])], fromList [("C", ["Welcome", "Not"])]]
+
+aJoinC =
+  [ fromList [("A", ["Hi", "Dear"]), ("C", ["Hi", "Bye"])]
+  , fromList [("A", ["Hi", "Dear"]), ("C", ["Welcome", "Not"])]
+  , fromList [("A", ["Welcome", "Kind"]), ("C", ["Hi", "Bye"])]
+  , fromList [("A", ["Welcome", "Kind"]), ("C", ["Welcome", "Not"])]
+  , fromList [("A", ["Greetings", "My"]), ("C", ["Hi", "Bye"])]
+  , fromList [("A", ["Greetings", "My"]), ("C", ["Welcome", "Not"])]
+  ]
 
 tableB =
   [ fromList [("B", ["Earth"])]
@@ -948,6 +1002,7 @@ tableB =
   , fromList [("B", ["World"])]
   ]
 
+
 joinedTable =
   [ fromList [("A", ["Hi", "Dear"]), ("B", ["Earth"])]
   , fromList [("A", ["Hi", "Dear"]), ("B", ["World"])]
@@ -957,14 +1012,6 @@ joinedTable =
   , fromList [("A", ["Greetings", "My"]), ("B", ["World"])]
   ]
 
-joinedTable' =
-  [ fromList [("A", ["Hi", "Dear"]), ("B", ["Earth"])]
-  , fromList [("A", ["Hi", "Dear"]), ("B", ["World"])]
-  , fromList [("A", ["Welcome", "Kind"]), ("B", ["Earth"])]
-  , fromList [("A", ["Welcome", "Kind"]), ("B", ["World"])]
-  , fromList [("A", ["Greetings", "My"]), ("B", ["Earth"])]
-  , fromList [("A", ["Greetings", "My"]), ("B", ["World"])]
-  ]
 
 evalErr :: Expr -> Row -> Bool
 evalErr expr row = case evalExpr expr row of
