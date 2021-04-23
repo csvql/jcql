@@ -49,6 +49,9 @@ instance Monad Result where
   return v = Ok v
 
 ----------------------------------------------------
+-- TODO: this is an obsolete because importCSV has changes since
+-- I'll leave it here in case there is something useful that can be used 
+
 -- evalQuery :: Query -> IO [[String]]
 -- -- TODO: convert imports to a Map
 -- evalQuery (AST imports table joins (Just filter) select) = do
@@ -63,24 +66,24 @@ instance Monad Result where
 ----------------------------------------------------
 -- Importing the given csv files into list of pairs containing the name of the file 
 -- and the unparsed csv. The name is either derived or used if explicitly stated
--- TODO: Are we reading just file name without extension or with .csv extension? I assume now with 
 importCSV :: [Import] -> IO [Result (Identifier, [Row])]
 importCSV []                              = return []
-importCSV ((AliasedImport id loc) : rest) = do -- TODO: For now the check of the name of the file only matters at implicit naming
+importCSV ((AliasedImport id loc) : rest) = do
   file <- readFile loc
   let rows = createRows (unparseCsv file) id
   rest <- importCSV rest
   return $ Ok (id, rows) : rest
--- TODO: better implicit check on file name
 importCSV ((UnaliasedImport loc) : rest) = do
   file <- readFile loc
   let id   = takeWhile (/= '.') (last $ splitOn "/" loc)
-  let rows = createRows (unparseCsv file) id
+      rows = createRows (unparseCsv file) id
   rest <- importCSV rest
   let verifiedPair =
         checkCharSet id >>= \verifiedId -> return (verifiedId, rows)
   return $ verifiedPair : rest
 
+-- Checking that the name of the file doesn't contain any illegal characters
+-- Note that the name won't have any . or / since these are used to get the name in the importCSV
 checkCharSet :: String -> Result String
 checkCharSet [] = return []
 checkCharSet (c : cs)
@@ -89,12 +92,13 @@ checkCharSet (c : cs)
     return (c : rest)
   | otherwise = Error "illegal characters used in the import"
 
-
+-- Simple parsing of read CSV into 2D array
 unparseCsv :: String -> [[String]]
 unparseCsv l =
   let line = lines l
   in  let lists = map (splitOn ",") line in map (map trim) lists
 
+-- Covert 2D array into a list of rows
 createRows :: [[String]] -> Identifier -> [Row]
 createRows table name = [ fromList [(name, row)] | row <- table ]
 
@@ -135,31 +139,23 @@ innerJoin t1 t2 e =
 filterTable :: Table -> Expr -> Result Table
 filterTable table expr = do
   evaledExpr <- unwrap $ map (evalExpr expr) table
-  let zipped = zip evaledExpr table
-  return $ [ row | (validity, row) <- zipped, isValid validity ]
+  zipped     <- unwrap $ zipWith (curry validityCheck) evaledExpr table
+  return $ [ row | (validity, row) <- zipped, validity ]
+
+validityCheck :: (Value, Row) -> Result (Bool, Row)
+validityCheck (val, row) = do
+  valid <- isValid val
+  return (valid, row)
 
 -- TODO: what if another value?
-isValid :: Value -> Bool
-isValid (ValueBool True ) = True
-isValid (ValueBool False) = False
+isValid :: Value -> Result Bool
+isValid (ValueBool True ) = Ok True
+isValid (ValueBool False) = Ok False
+isValid _                 = Error "Typing Error"
 ----------------------------------------------------
 
 -- Selection
 ----------------------------------------------------
--- select :: Select -> Table -> [[String]]
--- select [] _ = []
--- select (Wildcard : rest) table =
---   map (foldr1 (++) . map snd . toList) table ++ select rest table
--- -- TODO: Not sure about this one, can't really think of a good way to do select
--- select (QualifiedWildcard name : rest) table =
---   map (fromJust . Data.Map.lookup name) table ++ select rest table
--- select (SelectExpr expr : rest) table = case expr of
---   TableColumn name num ->
---     map (fromJust . getColumn (name, num)) table : select rest table
---   ValueExpr _    -> error "Type Error" -- TODO, convert it to monad
---   BinaryOpExpr{} -> error "Type Error"
---   UnaryOpExpr{}  -> error "Type Error"
-
 select :: Select -> Table -> Result [[Value]]
 select items []           = Ok []
 select items (row : rows) = do
@@ -189,9 +185,6 @@ performSelect row (e : es) = do
   checkType v = case v of
     ValueString v -> Ok $ ValueString v
     _             -> Error "Selection expressions can only have string"
-
-
-
 
 ----------------------------------------------------
 
