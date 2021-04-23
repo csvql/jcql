@@ -79,6 +79,7 @@ expr0 : unaryOp expr {UnaryOpExpr $1 $2}
 atom : identifier '.' int {TableColumn $1 $3}
     | value {ValueExpr $1}
     | identifier '(' many(expr,',') ')' {Function $1 $3}
+    --| case when then else
 
 value : string {ValueString $1}
     | int {ValueInt $1}
