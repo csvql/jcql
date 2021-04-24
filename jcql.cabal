@@ -28,6 +28,7 @@ library
       AST
       Lex
       Lib
+      Parse
   other-modules:
       Paths_jcql
   hs-source-dirs:
@@ -67,6 +68,7 @@ test-suite jcql-test
   main-is: Spec.hs
   other-modules:
       LexerSpec
+      ParserSpec
       Paths_jcql
   hs-source-dirs:
       test
