@@ -26,7 +26,6 @@ import AST
     '-' {TOperator "-" _}
     '+' {TOperator "+" _}
     '/' {TOperator "/" _}
-    '^' {TOperator "^" _}
     '%' {TOperator "%" _}
     '*' {TAsterisk _}
     '>' {TOperator ">" _}
@@ -46,13 +45,12 @@ import AST
     false {TBool False _}
     identifier {TIdentifier $$ _}
 
+%left or
+%left and
 %nonassoc '=' '<' '>' '<=' '>='
-%right '*' '/' '^' '%'
-%right '+' '-'
+%left '+' '-'
+%left '*' '/' '%'
 %right not
-%right and
-%right or
-%nonassoc true false
 %%
 
 ast : import many(importExpr, ',') take identifier any(joinExpr, ',') filter select many(selectItems,',') {AST $2 $4 $5 $6 $8}
@@ -70,30 +68,36 @@ selectItems : '*' {Wildcard}
     | identifier '.' '*' {QualifiedWildcard $1}
     | expr {SelectExpr $1}
 
-expr : atom binaryOp expr {BinaryOpExpr $1 $2 $3}
+expr : expr '=' expr { BinaryOpExpr $1 AST.EQ $3 }
+    | expr '+' expr { BinaryOpExpr $1 Sum $3 }
+    | expr '-' expr { BinaryOpExpr $1 Difference $3 }
+    | expr and expr { BinaryOpExpr $1 AND $3 }
+    | expr or expr { BinaryOpExpr $1 OR $3 }
+    | expr '<' expr { BinaryOpExpr $1 AST.LT $3 }
+    | expr '>' expr { BinaryOpExpr $1 AST.GT $3 }
+    | expr '<=' expr { BinaryOpExpr $1 LEQ $3 }
+    | expr '>=' expr { BinaryOpExpr $1 GEQ $3 }
+    | expr '*' expr { BinaryOpExpr $1 Product $3 }
+    | expr '/' expr { BinaryOpExpr $1 Division $3 }
+    | not expr {UnaryOpExpr NOT $2}
     | expr0 {$1}
 
-expr0 : unaryOp expr {UnaryOpExpr $1 $2}
+expr0 : case whenthens else expr end {Case $2 $4}
     | atom {$1}
+    
+whenthens: whenthen { [$1] }
+         | whenthens whenthen { $1++[$2] }
+whenthen : when expr then expr { ($2, $4) }
 
 atom : identifier '.' int {TableColumn $1 $3}
     | value {ValueExpr $1}
+    | '(' expr ')' {$2}
+    | true { ValueExpr (ValueBool True) }
+    | false { ValueExpr (ValueBool False) }
     | identifier '(' many(expr,',') ')' {Function $1 $3}
-    --| case when then else
 
 value : string {ValueString $1}
     | int {ValueInt $1}
-
-binaryOp : '=' {AST.EQ}
-    |'+' {Sum}
-    | '-' {Difference}
-    | and {AND}
-    | or {OR}
-    | '>' {AST.GT}
-    | '<' {AST.LT}
-    | '>=' {GEQ}
-    | '<=' {LEQ}
-    | '*' {Product}
 
 unaryOp : not {NOT}
 

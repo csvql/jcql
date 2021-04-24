@@ -55,6 +55,7 @@ data BinaryOpType =
   | Sum -- +
   | Difference -- -
   | Product -- multiply, *
+  | Division
   deriving (Show,Eq)
 
 data UnaryOpType = NOT

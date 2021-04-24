@@ -41,7 +41,11 @@ testParser =
             testCase "function and unary operator" (parse "import A 'a.csv', B 'b.csv' take A cross join B where Len(a.1) = 0 select a.1" @?= AST [AliasedImport "B" "b.csv", AliasedImport "A" "a.csv"] "A" [Cross "B"] (Just (BinaryOpExpr (Function "Len" [TableColumn "a" 1]) AST.EQ (ValueExpr (ValueInt 0)))) [SelectExpr (TableColumn "a" 1)])
         ],
         testGroup "expression" [
-            testCase "equality precedence" $ parseExpr "0+1=2" @?= "(0+1)=2"
+            testCase "arithmetic precedence" $ parseExpr "0+1=1+2*5" @?= "(0 + 1) = (1 + (2 * 5))",
+            testCase "boolean precedence" $ parseExpr "not true or false and true" @?= "(not true) or (false and true)",
+            testCase "boolean comparison precedence" $ parseExpr "true or false = true" @?= "true or (false = true)",
+            testCase "not is right associative" $ parseExpr "not not true" @?= "not (not true)",
+            testCase "division and multiplication" $ parseExpr "1 * 2 / 3" @?= "(1 * 2) / 3"
         ],
         testGroup "select" [
             testCase "select one column" (parse "import 'a.csv' take x select a.1" @?= AST [UnaliasedImport "a.csv"] "x" [] Nothing [SelectExpr (TableColumn "a" 1)]),
@@ -49,6 +53,11 @@ testParser =
             testCase "select value" (parse "import 'a.csv' take x select 0" @?= AST [UnaliasedImport "a.csv"] "x" [] Nothing [SelectExpr (ValueExpr (ValueInt 0))]),
             testCase "select wildcard" (parse "import 'a.csv' take x select *" @?= AST [UnaliasedImport "a.csv"] "x" [] Nothing [Wildcard]),
             testCase "select qualified wildcard" (parse "import 'a.csv' take x select a.*" @?= AST [UnaliasedImport "a.csv"] "x" [] Nothing [QualifiedWildcard "a"])
+        ],
+        testGroup "case" [
+            testCase "basic" $ parseExpr "case when true then 1 else 2 end" @?= "case when (true) then (1) else (2) end",
+            testCase "multiple branches" $ parseExpr "case when true then 1 when false then 3 else 2 end" @?= "case when (true) then (1 when (false) then (3) else (2) end",
+            testCase "nested" $ parseExpr "case when 1 then case when 2 then 2 else 3 end else 69 end" @?= "case when (1) then (case when (2) then (2) else (3) end) else (69) end"
         ]
     ]
 
@@ -56,19 +65,33 @@ parse :: String -> Query
 parse = parseJCQL . alexScanTokens
 
 parseExpr :: String -> String
-parseExpr s = (init . tail) $ printExpr $ getExpr ast
+parseExpr s = trimBrackets $ printExpr $ getExpr ast
     where ast = parse ("import 'a.csv' take a where "++s++" select a.1")
           getExpr (AST _ _ _ f _) = fromJust f
+          trimBrackets (fst:s) = if fst == '(' then init s else fst:s
 
 printExpr e = case e of
-    BinaryOpExpr left op right -> "("++printExpr left++printBOP op++printExpr right++")"
+    BinaryOpExpr left op right -> "("++printExpr left++" "++printBOP op++" "++printExpr right++")"
+    UnaryOpExpr op expr -> "("++printUOP op++" "++printExpr expr++")"
     ValueExpr v -> printValue v
+    Case whens els -> "case " ++ unwords (map printWhen whens) ++ ") else (" ++ printExpr els ++ ") end"
+
+printWhen (condition, value) = "when (" ++ printExpr condition ++ ") then (" ++ printExpr value
 
 printBOP :: BinaryOpType -> String
 printBOP op = case op of
  AST.EQ -> "="
+ Product  -> "*"
+ Division  -> "/"
  Sum  -> "+"
+ AND  -> "and"
+ OR   -> "or"
+
+printUOP :: UnaryOpType -> [Char]
+printUOP op = case op of
+  NOT  -> "not"
     
 printValue :: Value -> String 
 printValue v = case v of
     ValueInt i -> show i
+    ValueBool b -> map toLower $ show b
