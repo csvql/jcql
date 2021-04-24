@@ -1,9 +1,13 @@
-import Test.Tasty (defaultMain, testGroup, TestTree)
-import LexerSpec (testLexer)
+import           InterpreterSpec                ( testInterpreter )
+import           LexerSpec                      ( testLexer )
+import           Test.Tasty                     ( TestTree
+                                                , defaultMain
+                                                , testGroup
+                                                )
 import ParserSpec (testParser)
 
 main :: IO ()
 main = defaultMain testAll
 
 testAll :: TestTree
-testAll = testGroup "Unit Tests" [testLexer,testParser]
+testAll = testGroup "Unit Tests" [testLexer, testInterpreter, testParser]

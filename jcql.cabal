@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.2.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 
@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       AST
+      Interpreter
       Lex
       Lib
       Parse
@@ -39,6 +40,8 @@ library
   build-depends:
       array
     , base >=4.7 && <5
+    , containers
+    , split
     , tasty
     , tasty-hunit
     , tasty-quickcheck
@@ -57,7 +60,9 @@ executable jcql-exe
   build-depends:
       array
     , base >=4.7 && <5
+    , containers
     , jcql
+    , split
     , tasty
     , tasty-hunit
     , tasty-quickcheck
@@ -67,6 +72,7 @@ test-suite jcql-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      InterpreterSpec
       LexerSpec
       ParserSpec
       Paths_jcql
@@ -79,7 +85,9 @@ test-suite jcql-test
   build-depends:
       array
     , base >=4.7 && <5
+    , containers
     , jcql
+    , split
     , tasty
     , tasty-hunit
     , tasty-quickcheck

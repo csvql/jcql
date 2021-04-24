@@ -21,8 +21,9 @@ data Join =
 
 type Location = String
 type Identifier = String
-type Filter = Expr
+type Filter = Maybe Expr -- Best to have maybe in case there is no filter
 type Select = [SelectItem]
+
 data SelectItem =
   SelectExpr Expr
   | QualifiedWildcard Identifier
