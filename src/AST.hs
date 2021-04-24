@@ -1,19 +1,23 @@
-module AST where
+module AST(Query(..),Import(..),Join(..),SelectItem(..),Expr(..),Value(..),BinaryOpType(..),UnaryOpType(..)) where
 
-data Query = AST [Import] -- import (...)
-                          Identifier -- take {{identifier}}
-                                     [Join] -- join (...)
-                                            Filter -- filter 
-                                                   Select -- select
+data Query
+  = AST [Import] -- import (...)
+    Identifier -- take {{identifier}}
+    [Join] -- join (...)
+    (Maybe Filter) -- filter 
+    Select -- select
+    deriving (Show, Eq)
 
 data Import =
   AliasedImport Identifier Location
   | UnaliasedImport Location
+    deriving (Show, Eq)
 
 -- TODO: Think about whether we need any more joins than this 
 data Join =
   Inner Identifier Expr
   | Cross Identifier
+    deriving (Show, Eq)
 
 type Location = String
 type Identifier = String
@@ -24,6 +28,7 @@ data SelectItem =
   SelectExpr Expr
   | QualifiedWildcard Identifier
   | Wildcard
+    deriving (Show, Eq)
 
 data Expr =
   TableColumn String Int-- identifier, such as table name
@@ -51,6 +56,7 @@ data BinaryOpType =
   | Sum -- +
   | Difference -- -
   | Product -- multiply, *
+  | Division
   deriving (Show,Eq)
 
 data UnaryOpType = NOT

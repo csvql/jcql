@@ -29,6 +29,7 @@ library
       Interpreter
       Lex
       Lib
+      Parse
   other-modules:
       Paths_jcql
   hs-source-dirs:
@@ -73,6 +74,7 @@ test-suite jcql-test
   other-modules:
       InterpreterSpec
       LexerSpec
+      ParserSpec
       Paths_jcql
   hs-source-dirs:
       test

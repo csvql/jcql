@@ -10,7 +10,7 @@ $digit = 0-9
 $alpha = [a-zA-Z]
 
 @identifier = $alpha [a-zA-Z0-9_]*
-@int     = [1-9] $digit*
+@int     = $digit+
 
 @compare = [\>\<][\=]?
 
@@ -27,12 +27,16 @@ tokens :-
 <0> true { \p _ -> TBool True p}
 <0> false { \p _ -> TBool False p}
 
+<0> import|take|join|inner|cross|on|case|when|then|else|end|where|select { \p s -> TKeyword s p }
+
 <0> \(|\)|\[|\]  { mkBracket }
 <0> \.    { \p _ -> TDot p }
 <0> \,    { \p _ -> TComma p }
 <0> @single_str|@double_str { \p s -> TString (strip_quotes s) p}
 <0> @int                    { \p s -> TInt (read s) p }
 <0> @identifier             { \p s -> TIdentifier s p }
+<0> \*             { \p _ -> TAsterisk p }
+
 
 {
 strip_quotes = tail . init
@@ -43,18 +47,22 @@ str (TDot _)        = "."
 str (TComma _)      = ","
 str (TString s _)     = "\"" ++ s ++ "\""
 str (TIdentifier c _) = c
+str (TKeyword c _) = c
 str (TBracket c _) = c
 str (TInt i _)        = show i
+str (TAsterisk _) = "*"
 
 data Token = 
   TIdentifier String AlexPosn
   | TDot AlexPosn
   | TComma AlexPosn
+  | TKeyword String AlexPosn
   | TOperator String AlexPosn
   | TBracket String AlexPosn
   | TString String AlexPosn
   | TInt Int AlexPosn
   | TBool Bool AlexPosn
+  | TAsterisk AlexPosn
   | TArrow AlexPosn
   deriving (Eq,Show)
 }
