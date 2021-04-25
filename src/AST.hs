@@ -1,10 +1,10 @@
-module AST(Query(..),Import(..),Join(..),SelectItem(..),Expr(..),Value(..),BinaryOpType(..),UnaryOpType(..)) where
+module AST where
 
 data Query
   = AST [Import] -- import (...)
     Identifier -- take {{identifier}}
     [Join] -- join (...)
-    (Maybe Filter) -- filter 
+    Filter -- filter 
     Select -- select
     deriving (Show, Eq)
 
