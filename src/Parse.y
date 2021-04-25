@@ -118,7 +118,7 @@ any(p,s) :   { [] }
 {
 
 parseError :: [Token] -> a
-parseError tokens = error $ "Parse error at token: " ++ show token ++ "\nAt position: "
+parseError tokens = error $ "Parse error at token: " ++ token ++ "\nAt position: "
       where
-            token = head tokens
+            token = if null tokens then "START" else show $ head tokens
 }
