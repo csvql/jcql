@@ -144,6 +144,7 @@ getImport tables id = case Data.Map.lookup  id tables of
 resolveTableValue :: TableMap -> TableValue -> Table
 resolveTableValue tables (TableRef id) = fromJust $ Data.Map.lookup id tables
 --TODO: add resolver for InlineTable
+--TODO: return result and error if cannot look up table
 
 -- Joins
 -- TODO: update it to use the Result Monad
