@@ -15,6 +15,7 @@ import qualified Test.Tasty.QuickCheck         as QC
 import           AST
 import           Data.Maybe
 import           Interpreter
+import AST (TableValue(TableRef))
 
 testInterpreter :: TestTree
 testInterpreter = testGroup
@@ -25,10 +26,10 @@ testInterpreter = testGroup
       "valid CSV"
       [ testCase "Simple Aliased Import" $ do
         csv <- importCSV [AliasedImport "user" "./testCsv/user.csv"]
-        csv @?= [Ok ("user", users)]
+        csv @?= Ok (singleton "user" users)
       , testCase "Simple Unaliased Import" $ do
         csv <- importCSV [UnaliasedImport "./testCsv/user.csv"]
-        csv @?= [Ok ("user", users)]
+        csv @?= Ok (singleton "user" users)
       ]
     , testGroup
       "multipleCSV's"
@@ -37,19 +38,19 @@ testInterpreter = testGroup
           [ AliasedImport "user"    "./testCsv/user.csv"
           , AliasedImport "country" "./testCsv/country.csv"
           ]
-        csv @?= [Ok ("user", users), Ok ("country", countries)]
+        csv @?= Ok (fromList [("user", users), ("country", countries)])
       , testCase "Two Unaliased Imports" $ do
         csv <- importCSV
           [ UnaliasedImport "./testCsv/user.csv"
           , UnaliasedImport "./testCsv/country.csv"
           ]
-        csv @?= [Ok ("user", users), Ok ("country", countries)]
+        csv @?= Ok (fromList [("user", users), ("country", countries)])
       ]
     , testGroup
       "Invalid CSV"
       [ testCase "Import with a weird name" $ do
           csv <- importCSV [UnaliasedImport "./testCsv/b$d.csv"]
-          let throwsError = case head csv of
+          let throwsError = case csv of
                 Ok    _ -> False
                 Error _ -> True
           throwsError @?= True
@@ -731,11 +732,11 @@ testInterpreter = testGroup
               tableMap
               users
               [ Inner
-                "user"
+                (TableRef "user")
                 (BinaryOpExpr (TableColumn "user" 1) AST.EQ (TableColumn "user" 1)
                 )
               , Inner
-                "country"
+                (TableRef "country")
                 (BinaryOpExpr (TableColumn "user" 2)
                               AST.EQ
                               (TableColumn "country" 0)
@@ -769,6 +770,7 @@ testInterpreter = testGroup
               )
         @?= Nothing
         ]
+        -- testCase "nested table" $ 
     ]
   , testGroup
     "Filter"
@@ -847,12 +849,12 @@ testInterpreter = testGroup
             of
               Ok result ->
                 result
-                  @?= [ [ValueString "0"]
-                      , [ValueString "0"]
-                      , [ValueString "0"]
-                      , [ValueString "0"]
-                      , [ValueString "0"]
-                      , [ValueString "0"]
+                  @?= [ ["0"]
+                      , ["0"]
+                      , ["0"]
+                      , ["0"]
+                      , ["0"]
+                      , ["0"]
                       ]
               Error _ -> assertFailure "Failed to return selection"
         , testCase "COALESCE function" -- Note that I'm not testing the actual COALESCE function, just in this context
@@ -926,12 +928,12 @@ testInterpreter = testGroup
             of
               Ok result ->
                 result
-                  @?= [ [ValueString "OOO", ValueString "NOO"]
-                      , [ValueString "OOO", ValueString "NOO"]
-                      , [ValueString "OOO", ValueString "NOO"]
-                      , [ValueString "OOO", ValueString "NOO"]
-                      , [ValueString "OOO", ValueString "NOO"]
-                      , [ValueString "OOO", ValueString "NOO"]
+                  @?= [ ["OOO", "NOO"]
+                      , ["OOO", "NOO"]
+                      , ["OOO", "NOO"]
+                      , ["OOO", "NOO"]
+                      , ["OOO", "NOO"]
+                      , ["OOO", "NOO"]
                       ]
               Error _ -> assertFailure "Failed to return selection"
         ]
@@ -952,25 +954,25 @@ tableMap = fromList [("user", users), ("country", countries)]
 countries =
   [fromList [("country", ["GB", "66"])], fromList [("country", ["PL", "38"])]]
 
-convert :: [Row] -> [[Value]]
+convert :: [Row] -> [[String]]
 convert [] = []
 convert (row : rows) =
-  [ ValueString value | value <- (concatMap snd . toList) row ] : convert rows
+  [ value | value <- (concatMap snd . toList) row ] : convert rows
 
-convert' :: [Row] -> [[Value]]
+convert' :: [Row] -> [[String]]
 convert' []           = []
 convert' (row : rows) = (conversion ++ conversion) : convert' rows
  where
-  conversion = [ ValueString value | value <- (concatMap snd . toList) row ]
+  conversion = [ value | value <- (concatMap snd . toList) row ]
 
-convert'' :: [Row] -> [Row] -> [[Value]]
+convert'' :: [Row] -> [Row] -> [[String]]
 convert'' [] _ = []
 convert'' (row' : rows') (row'' : rows'') =
   (conversion' ++ conversion'') : convert'' rows' rows''
  where
-  conversion' = [ ValueString value | value <- (concatMap snd . toList) row' ]
+  conversion' = [ value | value <- (concatMap snd . toList) row' ]
   conversion'' =
-    [ ValueString value | value <- (concatMap snd . toList) row'' ]
+    [ value | value <- (concatMap snd . toList) row'' ]
 
 
 tableA =

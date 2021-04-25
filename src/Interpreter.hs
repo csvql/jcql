@@ -62,25 +62,34 @@ instance Monad Result where
 --       filteredTable = filterTable joinedTable filter >>= \x -> return x
 --   return [[]]
 
+emptyTable :: TableMap
+emptyTable = empty
+
 -- Parsing CSV's
 ----------------------------------------------------
 -- Importing the given csv files into list of pairs containing the name of the file 
 -- and the unparsed csv. The name is either derived or used if explicitly stated
-importCSV :: [Import] -> IO [Result (Identifier, [Row])]
-importCSV []                              = return []
+importCSV :: [Import] -> IO (Result TableMap)
+importCSV []                              = return $ Ok emptyTable
 importCSV ((AliasedImport id loc) : rest) = do
   file <- readFile loc
   let rows = createRows (unparseCsv file) id
   rest <- importCSV rest
-  return $ Ok (id, rows) : rest
+  return $ Ok (singleton id rows) `mergeImports` rest
 importCSV ((UnaliasedImport loc) : rest) = do
   file <- readFile loc
   let id   = takeWhile (/= '.') (last $ splitOn "/" loc)
       rows = createRows (unparseCsv file) id
   rest <- importCSV rest
   let verifiedPair =
-        checkCharSet id >>= \verifiedId -> return (verifiedId, rows)
-  return $ verifiedPair : rest
+        checkCharSet id >>= \verifiedId -> return (singleton verifiedId rows)
+  return $ verifiedPair `mergeImports` rest
+
+mergeImports :: Result TableMap -> Result TableMap -> Result TableMap
+mergeImports a b = do
+  a' <- a
+  b' <- b
+  return $ a' `mergeMap` b'
 
 -- Checking that the name of the file doesn't contain any illegal characters
 -- Note that the name won't have any . or / since these are used to get the name in the importCSV
@@ -107,17 +116,47 @@ trim :: String -> String
 trim = f . f where f = reverse . dropWhile isSpace
 ----------------------------------------------------
 
+-- eval :: TableMap -> TableQuery -> Table 
+
+evalRoot :: Query -> IO(Result Table)
+evalRoot (AST imports tableQuery) = do
+  tables <- importCSV imports
+  case tables of
+    Ok map -> return $ evalTable map tableQuery
+    Error e -> return $ Error e
+
+evalTable :: TableMap -> TableQuery -> Result Table
+evalTable tables (id, joins, filter, selected) = do
+  take <- getImport tables id
+  let joined = performJoins tables take joins -- TODO: should be joined
+  filtered <- case filter of
+    Nothing -> Ok joined
+    Just filter -> filterTable joined filter
+  selected <- select selected filtered
+  Ok (map (singleton id) selected)
+
+
+getImport :: TableMap -> String -> Result Table
+getImport tables id = case Data.Map.lookup  id tables of
+  Nothing -> Error $ "table "++id++" not found"
+  Just v -> Ok v
+
+resolveTableValue :: TableMap -> TableValue -> Table
+resolveTableValue tables (TableRef id) = fromJust $ Data.Map.lookup id tables
+--TODO: add resolver for InlineTable
+
 -- Joins
 -- TODO: update it to use the Result Monad
 ----------------------------------------------------
 performJoins :: TableMap -> Table -> [Join] -> Table
 performJoins _      final []                     = final
-performJoins tables table (Inner id exp : joins) = performJoins tables
+performJoins tables table (Inner table2 exp : joins) = performJoins tables
                                                                 join
                                                                 joins
-  where join = innerJoin table (fromJust $ Data.Map.lookup id tables) exp
-performJoins tables table (Cross id : joins) = performJoins tables join joins
-  where join = crossJoin table (fromJust $ Data.Map.lookup id tables)
+  where join = innerJoin table (resolveTableValue tables table2) exp
+
+performJoins tables table (Cross table' : joins) = performJoins tables join joins
+  where join = crossJoin table (resolveTableValue tables table')
 
 -- crossJoin joins two tables together
 crossJoin :: [Row] -> [Row] -> [Row]
@@ -157,7 +196,7 @@ isValid _                 = Error "Typing Error"
 
 -- Selection
 ----------------------------------------------------
-select :: Select -> Table -> Result [[Value]]
+select :: Select -> Table -> Result [[String]]
 select items []           = Ok []
 select items (row : rows) = do
   let exprs = map (unwrapSelect row) items
@@ -177,7 +216,7 @@ unwrapSelect row Wildcard       = concat
   where listTables = keys row
 
 -- Reconstruct the row based on the results of the expressions, which are the converted select Item
-performSelect :: Row -> [Expr] -> Result [Value]
+performSelect :: Row -> [Expr] -> Result [String]
 performSelect _   []       = Ok []
 performSelect row (e : es) = do
   value        <- evalExpr e row
@@ -186,7 +225,7 @@ performSelect row (e : es) = do
   return (checkedValue : rest)
  where
   checkType v = case v of
-    ValueString v -> Ok $ ValueString v
+    ValueString v -> Ok v
     _             -> Error "Selection expressions can only have string"
 
 ----------------------------------------------------
@@ -366,7 +405,7 @@ getColumn (key, i) row = case Data.Map.lookup key row of
   Just columns -> if i < length columns then Just (columns !! i) else Nothing
 
 -- mergeMap merges two rows together
-mergeMap :: Row -> Row -> Row
+mergeMap :: Ord k => Map k [a] -> Map k [a] -> Map k [a]
 a `mergeMap` b = unionWith (++) a b
 
 -- utility function used by COALESCE
@@ -377,7 +416,7 @@ isNull = \case
 
 -- utility used by JOIN and WHERE
 isTrue :: Result Value -> Bool
-isTrue r = do
+isTrue r =
   case r of
     Ok v -> case v of
       ValueBool b -> b

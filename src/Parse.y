@@ -53,13 +53,18 @@ import AST
 %right not
 %%
 
-ast : import many(importExpr, ',') take identifier any(joinExpr, ',') filter select many(selectItems,',') {AST $2 $4 $5 $6 $8}
+ast : import many(importExpr, ',') rootTableQuery {AST $2 $3}
+    
+rootTableQuery: take identifier any(joinExpr, ',') filter select many(selectItems,',') { ($2,$3,$4,$6) }
+
+tableQuery: identifier {TableRef $1}
+ | '(' rootTableQuery ')' {InlineTable $2}
 
 importExpr : identifier string {AliasedImport $1 $2}
     | string {UnaliasedImport $1}
 
-joinExpr : cross join identifier {Cross $3}
-    | inner join identifier on expr {Inner $3 $5}
+joinExpr : cross join tableQuery {Cross $3}
+    | inner join tableQuery on expr {Inner $3 $5}
 
 filter : where expr {Just $2}
     |   {Nothing}

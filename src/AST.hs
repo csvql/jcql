@@ -1,22 +1,28 @@
 module AST where
 
-data Query
-  = AST [Import] -- import (...)
-    Identifier -- take {{identifier}}
-    [Join] -- join (...)
-    Filter -- filter 
-    Select -- select
-    deriving (Show, Eq)
+data Query = AST [Import] TableQuery-- import (...)
+  deriving (Show, Eq)
+
+type TableQuery
+  = (Identifier, -- take {{identifier}}
+                 [Join], -- join (...)
+                         Filter, -- filter 
+                                 Select) -- select
 
 data Import =
   AliasedImport Identifier Location
   | UnaliasedImport Location
     deriving (Show, Eq)
 
+data TableValue =
+  TableRef Identifier
+  | InlineTable TableQuery
+  deriving (Show, Eq)
+
 -- TODO: Think about whether we need any more joins than this 
 data Join =
-  Inner Identifier Expr
-  | Cross Identifier
+  Inner TableValue Expr
+  | Cross TableValue
     deriving (Show, Eq)
 
 type Location = String
