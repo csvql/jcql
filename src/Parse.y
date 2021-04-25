@@ -94,7 +94,7 @@ whenthens: whenthen { [$1] }
          | whenthens whenthen { $1++[$2] }
 whenthen : when expr then expr { ($2, $4) }
 
-atom : identifier '.' int {TableColumn $1 $3}
+atom : identifier '.' int {TableColumn $1 ($3-1)}
     | value {ValueExpr $1}
     | '(' expr ')' {$2}
     | true { ValueExpr (ValueBool True) }
