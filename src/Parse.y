@@ -107,7 +107,7 @@ value : string {ValueString $1}
 unaryOp : not {NOT}
 
 many(p,s) : p            { [$1] }
-    | many(p,s) s p  { $3:$1 }
+    | many(p,s) s p  { $1++[$3] }
 
 opt(p) : p { Just $1 }
     |   { Nothing }
