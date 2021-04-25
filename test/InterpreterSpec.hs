@@ -13,9 +13,9 @@ import           Test.Tasty.HUnit
 import qualified Test.Tasty.QuickCheck         as QC
 
 import           AST
+import           AST                            ( TableValue(TableRef) )
 import           Data.Maybe
 import           Interpreter
-import AST (TableValue(TableRef))
 
 testInterpreter :: TestTree
 testInterpreter = testGroup
@@ -76,12 +76,15 @@ testInterpreter = testGroup
         "EQ"
         [ testCase "String EQ String (same value) returns true"
         $   evalExpr
-              (BinaryOpExpr (ValueExpr (ValueString "a"))
+              (BinaryOpExpr (TableColumn "user" 1)
                             AST.EQ
-                            (ValueExpr (ValueString "a"))
+                            (ValueExpr (ValueString "Ryan"))
               )
-              empty
+              (head users)
         @?= Ok (ValueBool True)
+        , testCase "__TEMP__"
+        $   evalExpr (TableColumn "user" 1) (head users)
+        @?= Ok (ValueString "Ryan")
         , testCase "String EQ String (different values) returns false"
         $   evalExpr
               (BinaryOpExpr (ValueExpr (ValueString "a"))
@@ -848,14 +851,7 @@ testInterpreter = testGroup
               select [SelectExpr (ValueExpr (ValueString "0"))] joinedTable
             of
               Ok result ->
-                result
-                  @?= [ ["0"]
-                      , ["0"]
-                      , ["0"]
-                      , ["0"]
-                      , ["0"]
-                      , ["0"]
-                      ]
+                result @?= [["0"], ["0"], ["0"], ["0"], ["0"], ["0"]]
               Error _ -> assertFailure "Failed to return selection"
         , testCase "COALESCE function" -- Note that I'm not testing the actual COALESCE function, just in this context
           $ case
@@ -962,17 +958,15 @@ convert (row : rows) =
 convert' :: [Row] -> [[String]]
 convert' []           = []
 convert' (row : rows) = (conversion ++ conversion) : convert' rows
- where
-  conversion = [ value | value <- (concatMap snd . toList) row ]
+  where conversion = [ value | value <- (concatMap snd . toList) row ]
 
 convert'' :: [Row] -> [Row] -> [[String]]
 convert'' [] _ = []
 convert'' (row' : rows') (row'' : rows'') =
   (conversion' ++ conversion'') : convert'' rows' rows''
  where
-  conversion' = [ value | value <- (concatMap snd . toList) row' ]
-  conversion'' =
-    [ value | value <- (concatMap snd . toList) row'' ]
+  conversion'  = [ value | value <- (concatMap snd . toList) row' ]
+  conversion'' = [ value | value <- (concatMap snd . toList) row'' ]
 
 
 tableA =

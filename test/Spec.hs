@@ -5,9 +5,10 @@ import           Test.Tasty                     ( TestTree
                                                 , testGroup
                                                 )
 import ParserSpec (testParser)
+import IntegrationSpec (testIntegration)
 
 main :: IO ()
 main = defaultMain testAll
 
 testAll :: TestTree
-testAll = testGroup "Unit Tests" [testLexer, testInterpreter, testParser]
+testAll = testGroup "Unit Tests" [testLexer, testInterpreter, testParser, testIntegration]
