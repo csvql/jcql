@@ -87,10 +87,15 @@ importCSV ((UnaliasedImport loc) : rest) = do
 checkCharSet :: String -> Result String
 checkCharSet [] = return []
 checkCharSet (c : cs)
-  | isAlpha c || c == '_' || isNumber c = do
+  | isAlpha c || c == '_' || isNumber c
+  = do
     rest <- checkCharSet cs
     return (c : rest)
-  | otherwise = Error "illegal characters used in the import"
+  | otherwise
+  = Error
+    $ "Illegal character"
+    ++ show c
+    ++ " used in the import name. Consider changing the file name or giving an explicit name for the import"
 
 -- Simple parsing of read CSV into 2D array
 unparseCsv :: String -> [[String]]
@@ -152,7 +157,8 @@ validityCheck (val, row) = do
 isValid :: Value -> Result Bool
 isValid (ValueBool True ) = Ok True
 isValid (ValueBool False) = Ok False
-isValid _                 = Error "Typing Error"
+isValid _ =
+  Error "Invalid type used for filter condition. Only boolean is allowed"
 ----------------------------------------------------
 
 -- Selection
@@ -187,7 +193,9 @@ performSelect row (e : es) = do
  where
   checkType v = case v of
     ValueString v -> Ok $ ValueString v
-    _             -> Error "Selection expressions can only have string"
+    _ ->
+      Error
+        "Invalid type used in selection. Selection expressions can only result in a String value"
 
 ----------------------------------------------------
 
