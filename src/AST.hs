@@ -1,12 +1,21 @@
-module AST(Query(..),Import(..),Join(..),SelectItem(..),Expr(..),Value(..),BinaryOpType(..),UnaryOpType(..)) where
+module AST
+  ( Query(..)
+  , Import(..)
+  , Join(..)
+  , SelectItem(..)
+  , Expr(..)
+  , Value(..)
+  , BinaryOpType(..)
+  , UnaryOpType(..)
+  , Identifier
+  ) where
 
-data Query
-  = AST [Import] -- import (...)
-    Identifier -- take {{identifier}}
-    [Join] -- join (...)
-    (Maybe Filter) -- filter 
-    Select -- select
-    deriving (Show, Eq)
+data Query = AST [Import] -- import (...)
+                          Identifier -- take {{identifier}}
+                                     [Join] -- join (...)
+                                            (Maybe Filter) -- filter 
+                                                           Select -- select
+  deriving (Show, Eq)
 
 data Import =
   AliasedImport Identifier Location
