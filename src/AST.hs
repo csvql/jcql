@@ -8,6 +8,7 @@ module AST
   , BinaryOpType(..)
   , UnaryOpType(..)
   , Identifier
+  , Select
   ) where
 
 data Query = AST [Import] -- import (...)
