@@ -118,28 +118,28 @@ trim = f . f where f = reverse . dropWhile isSpace
 
 -- eval :: TableMap -> TableQuery -> Table 
 
-evalRoot :: Query -> IO(Result Table)
+evalRoot :: Query -> IO (Result Table)
 evalRoot (AST imports tableQuery) = do
   tables <- importCSV imports
   case tables of
-    Ok map -> return $ evalTable map tableQuery
-    Error e -> return $ Error e
+    Ok    map -> return $ evalTable map tableQuery
+    Error e   -> return $ Error e
 
 evalTable :: TableMap -> TableQuery -> Result Table
 evalTable tables (id, joins, filter, selected) = do
   take <- getImport tables id
   let joined = performJoins tables take joins -- TODO: should be joined
   filtered <- case filter of
-    Nothing -> Ok joined
+    Nothing     -> Ok joined
     Just filter -> filterTable joined filter
   selected <- select selected filtered
   Ok (map (singleton id) selected)
 
 
 getImport :: TableMap -> String -> Result Table
-getImport tables id = case Data.Map.lookup  id tables of
-  Nothing -> Error $ "table "++id++" not found"
-  Just v -> Ok v
+getImport tables id = case Data.Map.lookup id tables of
+  Nothing -> Error $ "table " ++ id ++ " not found"
+  Just v  -> Ok v
 
 resolveTableValue :: TableMap -> TableValue -> Table
 resolveTableValue tables (TableRef id) = fromJust $ Data.Map.lookup id tables
@@ -150,13 +150,15 @@ resolveTableValue tables (TableRef id) = fromJust $ Data.Map.lookup id tables
 -- TODO: update it to use the Result Monad
 ----------------------------------------------------
 performJoins :: TableMap -> Table -> [Join] -> Table
-performJoins _      final []                     = final
+performJoins _      final []                         = final
 performJoins tables table (Inner table2 exp : joins) = performJoins tables
-                                                                join
-                                                                joins
+                                                                    join
+                                                                    joins
   where join = innerJoin table (resolveTableValue tables table2) exp
 
-performJoins tables table (Cross table' : joins) = performJoins tables join joins
+performJoins tables table (Cross table' : joins) = performJoins tables
+                                                                join
+                                                                joins
   where join = crossJoin table (resolveTableValue tables table')
 
 -- crossJoin joins two tables together
@@ -340,7 +342,7 @@ evalNOT _             = Error "Type Error"
 -- evalFn takes a function name and its arguments and evaluates it
 evalFn :: String -> [Value] -> Result Value
 evalFn fn args = case fn of
-  "COALESCE" -> do
+  "coalesce" -> do
     let nonnull = filter (not . isNull) args
     if null nonnull then Ok (ValueString "") else Ok (head nonnull)
 
@@ -417,9 +419,8 @@ isNull = \case
 
 -- utility used by JOIN and WHERE
 isTrue :: Result Value -> Bool
-isTrue r =
-  case r of
-    Ok v -> case v of
-      ValueBool b -> b
-      _           -> False
-    Error e -> False
+isTrue r = case r of
+  Ok v -> case v of
+    ValueBool b -> b
+    _           -> False
+  Error e -> False
