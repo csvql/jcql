@@ -7,6 +7,7 @@ import System.Environment ( getArgs )
 import Interpreter
 import Control.Exception
 import System.Console.ANSI
+import System.IO (hPutStrLn, stderr)
 
 parse :: [FilePath] -> IO (Result String)
 parse [f] = do
@@ -32,6 +33,6 @@ eval c = do
     Ok v -> print v
 
 printErr e = do
-  setSGR [SetColor Foreground Vivid Red]
-  putStrLn e
-  setSGR [Reset]
+  hSetSGR stderr [SetColor Foreground Vivid Red]
+  hPutStrLn stderr e
+  hSetSGR stderr [Reset]
