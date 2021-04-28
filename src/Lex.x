@@ -22,8 +22,7 @@ tokens :-
 
 <0> "//".*     ;
 <0> $white+    ;
-<0> => { \p s -> TArrow p }
-<0> =|==|\-|\+|\/|\^|\%|@compare|not|and|or { \p s -> TOperator (map toLower s) p }
+<0> =|\-|\+|\/|\^|\%|@compare|not|and|or { \p s -> TOperator (map toLower s) p }
 <0> true { \p _ -> TBool True p}
 <0> false { \p _ -> TBool False p}
 
@@ -63,7 +62,6 @@ data Token =
   | TInt Int AlexPosn
   | TBool Bool AlexPosn
   | TAsterisk AlexPosn
-  | TArrow AlexPosn
   deriving (Eq,Show)
 
 showErr s (AlexPn _ l c) = "'"++s++"' at line "++show l++", column "++show c
@@ -79,5 +77,4 @@ tokenPosn (TString s p) = showErr s p
 tokenPosn (TInt i p) = showErr (show i) p
 tokenPosn (TBool b p) = showErr (show b) p
 tokenPosn (TAsterisk p) = showErr "*" p
-tokenPosn (TArrow p) = showErr "=>" p
 }

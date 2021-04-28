@@ -73,7 +73,6 @@ testLexer = testGroup
     ]
   , testCase "lexes dot" $ l "." @?= [TDot startPn]
   , testCase "lexes a comma" $ l "," @?= [TComma startPn]
-  , testCase "lexes arrow function" (l "=>  " @?= [TArrow startPn])
   , testCase "lexes asterisk" (l "*" @?= [TAsterisk startPn])
   , testCase "comments" (l "import // should import" @?= [TKeyword "import" startPn])
   ]
