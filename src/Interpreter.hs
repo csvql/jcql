@@ -145,9 +145,7 @@ trim = f . f where f = reverse . dropWhile isSpace
 
 evalRoot :: Query -> IO (Result Table)
 evalRoot (AST imports tableQuery) = do
-  putStrLn "Here maybe?"
   tables <- importCSV imports
-  putStrLn "There maybe?"
   case tables of
     Ok    map -> return $ evalTable map tableQuery
     Error e   -> return $ Error e
@@ -166,6 +164,28 @@ noTable id = Error $ "table '" ++ id ++ "' not found"
 errType expr actual expected =
   Error
     $  printExpr expr
+    ++ " should be of type '"
+    ++ printValueType expected
+    ++ "', but got '"
+    ++ printValueType actual
+    ++ "'"
+
+errBinaryType :: Expr -> Value -> Value -> Result a
+errBinaryType expr actual expected =
+  Error
+    $  "In "
+    ++ printExpr expr
+    ++ " second value should be of type '"
+    ++ printValueType expected
+    ++ "', but got '"
+    ++ printValueType actual
+    ++ "'"
+
+errUnaryType expr subexpr actual expected =
+  Error
+    $  printExpr subexpr
+    ++ " in "
+    ++ printExpr expr
     ++ " should be of type '"
     ++ printValueType expected
     ++ "', but got '"
@@ -283,10 +303,14 @@ evalExpr expr row = case expr of
   BinaryOpExpr l op r -> do
     left  <- evalExpr l row
     right <- evalExpr r row
-    evalBinaryOp op left right
+    case evalBinaryOp op left right of
+      Ok    v -> Ok v
+      Error _ -> errBinaryType expr right left
   UnaryOpExpr op e -> do
     value <- evalExpr e row
-    evalUnaryOp op value
+    case evalUnaryOp op value of
+      Ok    v -> Ok v
+      Error _ -> errUnaryType expr e value (ValueBool False)
   Function name args -> do
     vals <- unwrap $ map (`evalExpr` row) args
     evalFn name vals
