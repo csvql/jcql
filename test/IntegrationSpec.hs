@@ -66,5 +66,8 @@ testIntegration = testGroup
       , testCase "Example 2" $ example 3 2
       , testCase "Example 3" $ example 3 3
       ]
+    , testGroup
+      "Problem 4 (unsorted)"
+      [testCase "Example 1" $ example 4 1, testCase "Example 2" $ example 4 2]
     ]
   ]
