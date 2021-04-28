@@ -136,6 +136,7 @@ evalTable tables (id, joins, filter, selected) = do
   Ok (map (singleton id) selected)
 
 noTable id = Error $ "table '" ++ id ++ "' not found"
+errType expr actual expected = Error $ printExpr expr ++ " should be of type '"++printValueType expected++"', but got '"++printValueType actual++"'"
 
 getImport :: TableMap -> String -> Result Table
 getImport tables id = case Data.Map.lookup id tables of
@@ -232,8 +233,7 @@ performSelect row (e : es) = do
  where
   checkType v = case v of
     ValueString v -> Ok v
-    ValueInt v -> Error "select must return a string, got integer"
-    ValueBool v -> Error "select must return a string, got boolean"
+    _ -> errType e v (ValueString "")
 
 ----------------------------------------------------
 

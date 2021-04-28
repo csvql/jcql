@@ -65,7 +65,7 @@ testIntegration = testGroup
       "table 'a' not found"
     , testCase "Column not found" $ eval tableA "take a select a.3" @?= Error
       "could not find column 2 in table 'a' (of length 1)"
-    , testCase "Invalid select type" $ eval tableA "take a select 1, true" @?= Error "select must return a string, got integer"
+    , testCase "Invalid select type" $ eval tableA "take a select a.1 = ''" @?= Error "(a.1 = '') should be of type 'string', but got 'boolean'"
     ]
   ]
 tableA = singleton "a" [singleton "a" ["1", "2"]]
