@@ -65,4 +65,19 @@ data Token =
   | TAsterisk AlexPosn
   | TArrow AlexPosn
   deriving (Eq,Show)
+
+showErr s (AlexPn _ l c) = "'"++s++"' at line "++show l++", column "++show c
+
+tokenPosn :: Token -> String
+tokenPosn (TIdentifier id p) = showErr id p
+tokenPosn (TDot p) = showErr "." p
+tokenPosn (TComma p) = showErr "," p
+tokenPosn (TKeyword k p) = showErr k p
+tokenPosn (TOperator op p) = showErr op p
+tokenPosn (TBracket b p) = showErr b p
+tokenPosn (TString s p) = showErr s p
+tokenPosn (TInt i p) = showErr (show i) p
+tokenPosn (TBool b p) = showErr (show b) p
+tokenPosn (TAsterisk p) = showErr "*" p
+tokenPosn (TArrow p) = showErr "=>" p
 }

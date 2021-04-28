@@ -55,7 +55,7 @@ import AST
 
 ast : import many(importExpr, ',') rootTableQuery {AST $2 $3}
     
-rootTableQuery: take identifier any(joinExpr, ',') filter select many(selectItems,',') { ($2,$3,$4,$6) }
+rootTableQuery: take identifier any(joinExpr, ',') filter selectItems { ($2,$3,$4,$5) }
 
 tableQuery: identifier {TableRef $1}
  | '(' rootTableQuery ')' {InlineTable $2}
@@ -69,7 +69,10 @@ joinExpr : cross join tableQuery {Cross $3}
 filter : where expr {Just $2}
     |   {Nothing}
 
-selectItems : '*' {Wildcard}
+selectItems : select many(selectItem,',') {$2}
+            | {[]}
+
+selectItem : '*' {Wildcard}
     | identifier '.' '*' {QualifiedWildcard $1}
     | expr {SelectExpr $1}
 
@@ -118,7 +121,7 @@ any(p,s) :   { [] }
 {
 
 parseError :: [Token] -> a
-parseError tokens = error $ "Parse error at token: " ++ token ++ "\nAt position: "
+parseError tokens = error $ "unexpected token "++token
       where
-            token = if null tokens then "START" else show $ head tokens
+            token = if null tokens then "incomplete expression" else tokenPosn (head tokens)
 }

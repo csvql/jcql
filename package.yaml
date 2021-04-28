@@ -27,6 +27,7 @@ dependencies:
   - tasty
   - tasty-quickcheck
   - tasty-hunit
+  - ansi-terminal
 
 library:
   source-dirs: src

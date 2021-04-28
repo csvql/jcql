@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: be6acca26f94520de09339272d065652e7abfe98940e2bf83cdbfdccd207be25
+-- hash: 3e181faf99bbc091f54fad00403fd786ebafd6b3ea6dbb26ac4ff1f8eef2682e
 
 name:           jcql
 version:        0.1.0.0
@@ -40,7 +40,8 @@ library
       alex
     , happy
   build-depends:
-      array
+      ansi-terminal
+    , array
     , base >=4.7 && <5
     , containers
     , split
@@ -60,7 +61,8 @@ executable jcql-exe
       alex
     , happy
   build-depends:
-      array
+      ansi-terminal
+    , array
     , base >=4.7 && <5
     , containers
     , jcql
@@ -86,7 +88,8 @@ test-suite jcql-test
       alex
     , happy
   build-depends:
-      array
+      ansi-terminal
+    , array
     , base >=4.7 && <5
     , containers
     , jcql
