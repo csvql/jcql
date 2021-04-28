@@ -49,10 +49,22 @@ testIntegration = testGroup
   , testGroup
     "Problems from Coursework"
     [ testGroup
-        "Problem 1 (unsorted)"
-        [ testCase "Example 1" $ example 1 1
-        , testCase "Example 2" $ example 1 2
-        , testCase "Example 3" $ example 1 3
-        ]
+      "Problem 1 (unsorted)"
+      [ testCase "Example 1" $ example 1 1
+      , testCase "Example 2" $ example 1 2
+      , testCase "Example 3" $ example 1 3
+      ]
+    , testGroup
+      "Problem 2 (unsorted)"
+      [ testCase "Example 1" $ example 2 1
+      , testCase "Example 2" $ example 2 2
+      , testCase "Example 3" $ example 2 3
+      ]
+    , testGroup
+      "Problem 3 (unsorted)"
+      [ testCase "Example 1" $ example 3 1
+      , testCase "Example 2" $ example 3 2
+      , testCase "Example 3" $ example 3 3
+      ]
     ]
   ]
