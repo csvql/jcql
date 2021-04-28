@@ -745,7 +745,7 @@ testInterpreter = testGroup
                               (TableColumn "country" 0)
                 )
               ]
-        @?= [ fromList
+        @?= Ok [ fromList
               [ ("user"   , ["1", "Ryan", "GB"])
               , ("user"   , ["1", "Ryan", "GB"])
               , ("country", ["GB", "66"])
@@ -951,9 +951,8 @@ countries =
   [fromList [("country", ["GB", "66"])], fromList [("country", ["PL", "38"])]]
 
 convert :: [Row] -> [[String]]
-convert [] = []
-convert (row : rows) =
-  [ value | value <- (concatMap snd . toList) row ] : convert rows
+convert = map
+      (\ row -> [value | value <- (concatMap snd . toList) row])
 
 convert' :: [Row] -> [[String]]
 convert' []           = []

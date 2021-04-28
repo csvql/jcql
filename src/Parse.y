@@ -53,7 +53,10 @@ import AST
 %right not
 %%
 
-ast : import many(importExpr, ',') rootTableQuery {AST $2 $3}
+ast : imports rootTableQuery {AST $1 $2}
+    
+imports : import many(importExpr, ',') {$2}
+        | {[]}
     
 rootTableQuery: take identifier any(joinExpr, ',') filter selectItems { ($2,$3,$4,$5) }
 

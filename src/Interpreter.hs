@@ -127,42 +127,45 @@ evalRoot (AST imports tableQuery) = do
 
 evalTable :: TableMap -> TableQuery -> Result Table
 evalTable tables (id, joins, filter, selected) = do
-  take <- getImport tables id
-  let joined = performJoins tables take joins -- TODO: should be joined
+  take     <- getImport tables id
+  joined   <- performJoins tables take joins
   filtered <- case filter of
     Nothing     -> Ok joined
     Just filter -> filterTable joined filter
   selected <- select selected filtered
   Ok (map (singleton id) selected)
 
+noTable id = Error $ "table '" ++ id ++ "' not found"
 
 getImport :: TableMap -> String -> Result Table
 getImport tables id = case Data.Map.lookup id tables of
-  Nothing -> Error $ "table " ++ id ++ " not found"
+  Nothing -> noTable id
   Just v  -> Ok v
 
-resolveTableValue :: TableMap -> TableValue -> Table
-resolveTableValue tables (TableRef id) = fromJust $ Data.Map.lookup id tables
+resolveTableValue :: TableMap -> TableValue -> Result Table
+resolveTableValue tables (TableRef id) = case Data.Map.lookup id tables of
+  Nothing -> noTable id
+  Just v  -> Ok v
+
+resolveTableValue tables (InlineTable q) = evalTable tables q
 --TODO: add resolver for InlineTable
 --TODO: return result and error if cannot look up table
 
 -- Joins
 -- TODO: update it to use the Result Monad
 ----------------------------------------------------
-performJoins :: TableMap -> Table -> [Join] -> Table
-performJoins _      final []                         = final
-performJoins tables table (Inner table2 exp : joins) = performJoins tables
-                                                                    join
-                                                                    joins
-  where join = innerJoin table (resolveTableValue tables table2) exp
+performJoins :: TableMap -> Table -> [Join] -> Result Table
+performJoins _      final []                         = Ok final
+performJoins tables table (Inner table2 exp : joins) = do
+  toJoin <- resolveTableValue tables table2
+  performJoins tables (innerJoin table toJoin exp) joins
 
-performJoins tables table (Cross table' : joins) = performJoins tables
-                                                                join
-                                                                joins
-  where join = crossJoin table (resolveTableValue tables table')
+performJoins tables table (Cross table' : joins) = do
+  t2 <- resolveTableValue tables table'
+  performJoins tables (crossJoin table t2) joins
 
--- crossJoin joins two tables together
 crossJoin :: [Row] -> [Row] -> [Row]
+-- crossJoin joins two tables together
 crossJoin xs ys = [ x `mergeMap` y | x <- xs, y <- ys ]
 
 -- inner join joins two tables only if Expr evaluates to True
@@ -229,7 +232,8 @@ performSelect row (e : es) = do
  where
   checkType v = case v of
     ValueString v -> Ok v
-    _             -> Error "Selection expressions can only have string"
+    ValueInt v -> Error "select must return a string, got integer"
+    ValueBool v -> Error "select must return a string, got boolean"
 
 ----------------------------------------------------
 
@@ -241,9 +245,7 @@ performSelect row (e : es) = do
 evalExpr :: Expr -> Row -> Result Value
 evalExpr expr row = case expr of
   ValueExpr v         -> Ok v
-  TableColumn tbl col -> case getColumn (tbl, col) row of
-    Just v  -> Ok (ValueString v)
-    Nothing -> Error "table not found"
+  TableColumn tbl col -> getColumn (tbl, col) row
   BinaryOpExpr l op r -> do
     left  <- evalExpr l row
     right <- evalExpr r row
@@ -402,10 +404,20 @@ findRow rows expr = do
   if null filtered then Nothing else Just $ head filtered
 
 -- getColumn gets a column by table name and column index (starting from 0)
-getColumn :: (String, Int) -> Row -> Maybe String
+getColumn :: (String, Int) -> Row -> Result Value
 getColumn (key, i) row = case Data.Map.lookup key row of
-  Nothing      -> Nothing -- table name not found
-  Just columns -> if i < length columns then Just (columns !! i) else Nothing
+  Nothing      -> noTable key
+  Just columns -> if i < length columns
+    then Ok (ValueString (columns !! i))
+    else
+      Error
+      $  "could not find column "
+      ++ show i
+      ++ " in table '"
+      ++ key
+      ++ "' (of length "
+      ++ show (length row)
+      ++ ")"
 
 -- mergeMap merges two rows together
 mergeMap :: Ord k => Map k [a] -> Map k [a] -> Map k [a]

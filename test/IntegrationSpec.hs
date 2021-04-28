@@ -2,15 +2,13 @@ module IntegrationSpec
   ( testIntegration
   ) where
 
-import           Test.Tasty
-import           Test.Tasty.HUnit
-
+import           AST                            ( Query(AST) )
+import           Data.Map
 import           Interpreter
 import           Lex
 import           Parse
-
-import           AST                            ( Query(AST) )
-import           Data.Map
+import           Test.Tasty
+import           Test.Tasty.HUnit
 
 evalIO :: String -> IO (Result [[String]])
 evalIO s = do
@@ -24,7 +22,6 @@ eval tables s = singleTable $ evalTable tables query
 singleTable :: Result Table -> Result [[String]]
 singleTable res = do
   Prelude.map (head . elems) <$> res
-
 
 problem :: FilePath -> Assertion
 problem path = do
@@ -40,7 +37,7 @@ example f = testCase f $ problem $ "./testCsv/examples/" ++ f
 
 testIntegration :: TestTree
 testIntegration = testGroup
-  "Integration"
+  "Valid tests"
   [ testCase "reads csv file and produces list of pro developers" $ do
     out <-
       evalIO
@@ -61,15 +58,20 @@ testIntegration = testGroup
     , problem' "4.2"
     , problem' "5.1"
     ]
-  , testGroup "Example tests" [
-    example "multiple joins"
+  , testGroup "Example tests" [example "multiple joins", example "alias"]
+  , testGroup
+    "Errors"
+    [ testCase "Table not found" $ eval empty "take a" @?= Error
+      "table 'a' not found"
+    , testCase "Column not found" $ eval tableA "take a select a.3" @?= Error
+      "could not find column 2 in table 'a' (of length 1)"
+    , testCase "Invalid select type" $ eval tableA "take a select 1, true" @?= Error "select must return a string, got integer"
+    ]
   ]
-  ]
-
+tableA = singleton "a" [singleton "a" ["1", "2"]]
 
 readProblem' :: FilePath -> IO (String, String)
 readProblem' dir = do
   expected <- readFile $ dir ++ ".csv"
   query    <- readFile $ dir ++ ".cql"
   return (expected, query)
-
