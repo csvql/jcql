@@ -51,7 +51,7 @@ data Value =
     ValueString String
     | ValueInt Int
     | ValueBool Bool
-    deriving (Show,Eq)
+    deriving (Show,Eq,Ord)
 
 data BinaryOpType =
   EQ
@@ -73,7 +73,7 @@ data UnaryOpType = NOT
 
 printExpr e = case e of
   TableColumn name idx -> name ++ "." ++ show (idx + 1)
-  ValueExpr v         -> printValue v
+  ValueExpr v          -> printValue v
   BinaryOpExpr left op right ->
     "(" ++ printExpr left ++ " " ++ printBOP op ++ " " ++ printExpr right ++ ")"
   UnaryOpExpr op expr -> "(" ++ printUOP op ++ " " ++ printExpr expr ++ ")"
@@ -91,17 +91,17 @@ printWhen (condition, value) =
 
 printBOP :: BinaryOpType -> String
 printBOP op = case op of
-  AST.EQ   -> "="
-  AST.LT -> "<"
-  AST.LEQ -> "<="
-  AST.GT -> ">"
-  AST.GEQ -> ">="
-  AND      -> "and"
-  OR       -> "or"
-  Sum      -> "+"
+  AST.EQ     -> "="
+  AST.LT     -> "<"
+  AST.LEQ    -> "<="
+  AST.GT     -> ">"
+  AST.GEQ    -> ">="
+  AND        -> "and"
+  OR         -> "or"
+  Sum        -> "+"
   Difference -> "-"
-  Product  -> "*"
-  Division -> "/" -- TODO: we actually doing division?
+  Product    -> "*"
+  Division   -> "/" -- TODO: we actually doing division?
 
 printUOP :: UnaryOpType -> [Char]
 printUOP op = case op of
@@ -109,12 +109,12 @@ printUOP op = case op of
 
 printValue :: Value -> String
 printValue v = case v of
-  ValueInt  i -> show i
-  ValueBool b -> map toLower $ show b
-  ValueString s -> "'"++s++"'"
+  ValueInt    i -> show i
+  ValueBool   b -> map toLower $ show b
+  ValueString s -> "'" ++ s ++ "'"
 
 printValueType :: Value -> String
 printValueType v = case v of
-  ValueInt _ -> "integer"
-  ValueBool _ -> "boolean"
+  ValueInt    _ -> "integer"
+  ValueBool   _ -> "boolean"
   ValueString _ -> "string"

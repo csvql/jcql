@@ -161,9 +161,11 @@ evalTable tables (id, joins, filter, selected) = do
   Ok (map (singleton id) selected)
 
 noTable id = Error $ "table '" ++ id ++ "' not found"
+
 errType expr actual expected =
   Error
-    $  printExpr expr
+    $  "Error in Expression: "
+    ++ printExpr expr
     ++ " should be of type '"
     ++ printValueType expected
     ++ "', but got '"
@@ -173,7 +175,7 @@ errType expr actual expected =
 errBinaryType :: Expr -> Value -> Value -> Result a
 errBinaryType expr actual expected =
   Error
-    $  "In "
+    $  "Error in Expression: in "
     ++ printExpr expr
     ++ " second value should be of type '"
     ++ printValueType expected
@@ -183,7 +185,8 @@ errBinaryType expr actual expected =
 
 errUnaryType expr subexpr actual expected =
   Error
-    $  printExpr subexpr
+    $  "Error in Expression: in "
+    ++ printExpr subexpr
     ++ " in "
     ++ printExpr expr
     ++ " should be of type '"
@@ -313,16 +316,27 @@ evalExpr expr row = case expr of
       Error _ -> errUnaryType expr e value (ValueBool False)
   Function name args -> do
     vals <- unwrap $ map (`evalExpr` row) args
-    evalFn name vals
+    case evalFn name vals of
+      Ok v -> Ok v
+      Error err ->
+        Error $ "Error in expression: " ++ printExpr expr ++ ", " ++ err
   Case exprs def -> do
-    evaled <- unwrap
-      [ evalExpr a row >>= \v1 -> evalExpr b row >>= \v2 -> return (v1, v2)
+    evaled <- fromList <$> unwrap
+      [ evalExpr a row
+          >>= \v1 -> evalExpr b row >>= \v2 -> return ((v1, v2), (a, b))
       | (a, b) <- exprs
       ]
       -- [ unwrapPair (evalExpr a row, evalExpr b row) | (a, b) <- exprs ]
     evaledDef <- evalExpr def row
-    _         <- typeCheckCase evaled evaledDef
-    evalCase evaled evaledDef
+    _         <- case typeCheckCase evaled (keys evaled) (evaledDef, def) of
+      Ok a -> Ok a
+      Error err ->
+        Error
+          $  "Error in expression: case statement '"
+          ++ printExpr expr
+          ++ "': "
+          ++ err
+    evalCase (keys evaled) evaledDef
   -- Case        cases else' -> evalCase (map (`evalExpr` row) cases) else'
 ----------------------------------------------------
 
@@ -403,40 +417,142 @@ evalNOT _             = Error "Type Error"
 evalFn :: String -> [Value] -> Result Value
 evalFn fn args = case fn of
   "coalesce" -> do
+    _ <- sameTypeCheck (ValueString "") args
     let nonnull = filter (not . isNull) args
     if null nonnull then Ok (ValueString "") else Ok (head nonnull)
+  "length" -> do
+    if length args /= 1
+      then Error $ "function 'length' expects 1 argument but got: " ++ show
+        (length args)
+      else case head args of
+        ValueString a -> return $ ValueInt (length a)
+        ValueInt _ ->
+          Error "function 'length' expects type 'string', but got 'int'"
+        ValueBool _ ->
+          Error "function 'length' expects type 'string', but got 'boolean'"
 
+sameTypeCheck :: Value -> [Value] -> Result ()
+sameTypeCheck t                 []                       = Ok ()
+sameTypeCheck t@(ValueBool   _) (v@(ValueBool   _) : vs) = sameTypeCheck t vs
+sameTypeCheck t@(ValueString _) (v@(ValueString _) : vs) = sameTypeCheck t vs
+sameTypeCheck t@(ValueInt    _) (v@(ValueInt    _) : vs) = sameTypeCheck t vs
+sameTypeCheck t ((ValueInt v) : vs) =
+  Error
+    $  "Value '"
+    ++ show v
+    ++ "' has type 'int'"
+    ++ " when '"
+    ++ printValueType t
+    ++ "' is required"
 
 -- Specific type check depending on the type of the statement
-typeCheckCase :: [(Value, Value)] -> Value -> Result ()
-typeCheckCase ((ValueBool cond, ValueString stmt) : rest) def = typeCheckCase'
-  rest
-  def
+typeCheckCase
+  :: Map (Value, Value) (Expr, Expr)
+  -> [(Value, Value)]
+  -> (Value, Expr)
+  -> Result ()
+typeCheckCase mapping ((ValueBool cond, ValueString stmt) : rest) def =
+  typeCheckCase' mapping rest def
  where
-  typeCheckCase' [] (ValueString _) = return ()
-  typeCheckCase' ((ValueBool cond, ValueString stmt) : rest) def =
-    typeCheckCase' rest def
-  typeCheckCase' _ _ = Error "Type Error"
-
-typeCheckCase ((ValueBool cond, ValueBool stmt) : rest) def = typeCheckCase'
-  rest
-  def
+  typeCheckCase' mapping [] (ValueString _, _) = return ()
+  typeCheckCase' mapping ((ValueBool cond, ValueString stmt) : rest) def =
+    typeCheckCase' mapping rest def
+  typeCheckCase' mapping (vals@(ValueBool cond, stmt) : rest) _ =
+    Error
+      $  "expected type 'string' in expression "
+      ++ (concatMap printExpr . fromJust) (Data.Map.lookup vals mapping)
+      ++ " but got '"
+      ++ printValueType stmt
+      ++ "'"
+  typeCheckCase' mapping (vals@(cond, stmt) : rest) _ =
+    Error
+      $  "expected condition of type 'boolean' in expression "
+      ++ (concatMap printExpr . fromJust) (Data.Map.lookup vals mapping)
+      ++ " but got '"
+      ++ printValueType cond
+      ++ "'"
+  typeCheckCase' mapping _ (val, expr) =
+    Error
+      $  "expected type 'string' in expression "
+      ++ printExpr expr
+      ++ " but got '"
+      ++ printValueType val
+      ++ "'"
+typeCheckCase mapping ((ValueBool cond, ValueBool stmt) : rest) def =
+  typeCheckCase' mapping rest def
  where
-  typeCheckCase' [] (ValueBool _) = return ()
-  typeCheckCase' ((ValueBool cond, ValueBool stmt) : rest) def =
-    typeCheckCase' rest def
-  typeCheckCase' _ _ = Error "Type Error"
-
-typeCheckCase ((ValueBool cond, ValueInt stmt) : rest) def = typeCheckCase'
-  rest
-  def
+  typeCheckCase' mapping [] (ValueBool _, _) = return ()
+  typeCheckCase' mapping ((ValueBool cond, ValueBool stmt) : rest) def =
+    typeCheckCase' mapping rest def
+  typeCheckCase' mapping (vals@(ValueBool cond, stmt) : rest) _ =
+    Error
+      $  "expected type 'boolean' in expression "
+      ++ (concatMap printExpr . fromJust) (Data.Map.lookup vals mapping)
+      ++ " but got '"
+      ++ printValueType stmt
+      ++ "'"
+  typeCheckCase' mapping (vals@(cond, stmt) : rest) _ =
+    Error
+      $  "expected condition of type 'boolean' in expression "
+      ++ (concatMap printExpr . fromJust) (Data.Map.lookup vals mapping)
+      ++ " but got '"
+      ++ printValueType cond
+      ++ "'"
+  typeCheckCase' mapping _ (val, expr) =
+    Error
+      $  "expected type 'boolean' in expression "
+      ++ printExpr expr
+      ++ " but got '"
+      ++ printValueType val
+      ++ "'"
+typeCheckCase mapping ((ValueBool cond, ValueInt stmt) : rest) def =
+  typeCheckCase' mapping rest def
  where
-  typeCheckCase' [] (ValueBool _) = return ()
-  typeCheckCase' ((ValueBool cond, ValueInt stmt) : rest) def =
-    typeCheckCase' rest def
-  typeCheckCase' _ _ = Error "Type Error"
+  typeCheckCase' mapping [] (ValueBool _, _) = return ()
+  typeCheckCase' mapping ((ValueBool cond, ValueInt stmt) : rest) def =
+    typeCheckCase' mapping rest def
+  typeCheckCase' mapping (vals@(ValueBool cond, stmt) : rest) _ =
+    Error
+      $  "expected type 'int' in expression "
+      ++ (concatMap printExpr . fromJust) (Data.Map.lookup vals mapping)
+      ++ " but got '"
+      ++ printValueType stmt
+      ++ "'"
+  typeCheckCase' mapping (vals@(cond, stmt) : rest) _ =
+    Error
+      $  "expected condition of type 'boolean' in expression "
+      ++ (concatMap printExpr . fromJust) (Data.Map.lookup vals mapping)
+      ++ " but got '"
+      ++ printValueType cond
+      ++ "'"
+  typeCheckCase' mapping _ (val, expr) =
+    Error
+      $  "expected type 'int' in expression "
+      ++ printExpr expr
+      ++ " but got '"
+      ++ printValueType val
+      ++ "'"
 
-typeCheckCase _ _ = Error "Type Error"
+
+-- typeCheckCase ((ValueBool cond, ValueBool stmt) : rest) def = typeCheckCase'
+--   rest
+--   def
+--  where
+--   typeCheckCase' [] (ValueBool _) = return ()
+--   typeCheckCase' ((ValueBool cond, ValueBool stmt) : rest) def =
+--     typeCheckCase' rest def
+--   typeCheckCase' _ _ = Error "Type Error"
+
+-- typeCheckCase ((ValueBool cond, ValueInt stmt) : rest) def = typeCheckCase'
+--   rest
+--   def
+--  where
+--   typeCheckCase' [] (ValueBool _) = return ()
+--   typeCheckCase' ((ValueBool cond, ValueInt stmt) : rest) def =
+--     typeCheckCase' rest def
+--   typeCheckCase' _ _ = Error "Type Error"
+
+-- typeCheckCase _ _ = Error "Type Error"
 
 
 -- The function responsible for actual evaluation of the case statement
@@ -482,6 +598,7 @@ mergeMap :: Ord k => Map k [a] -> Map k [a] -> Map k [a]
 a `mergeMap` b = unionWith (++) a b
 
 -- utility function used by COALESCE
+-- TODO: make it a Result monad
 isNull :: Value -> Bool
 isNull = \case
   ValueString s -> null s
