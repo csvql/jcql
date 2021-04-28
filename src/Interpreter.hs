@@ -2,6 +2,7 @@
 module Interpreter where
 
 import           AST
+import           Control.Exception
 import           Data.Char
 import           Data.List
 import           Data.List.Split
@@ -16,6 +17,7 @@ import           Data.Map                       ( Map
                                                 , unionWith
                                                 )
 import           Data.Maybe
+import           GHC.IO.Exception
 
 -- Row defines a single row
 type Row = Map Identifier [String]
@@ -69,21 +71,44 @@ emptyTable = empty
 ----------------------------------------------------
 -- Importing the given csv files into list of pairs containing the name of the file 
 -- and the unparsed csv. The name is either derived or used if explicitly stated
+-- importCSV :: [Import] -> IO (Result TableMap)
+-- importCSV []                              = return $ Ok emptyTable
+-- importCSV ((AliasedImport id loc) : rest) = do
+--   file <- readFile loc
+--   let rows = createRows (unparseCsv file) id
+--   rest <- importCSV rest
+--   return $ Ok (singleton id rows) `mergeImports` rest
+-- importCSV ((UnaliasedImport loc) : rest) = do
+--   file <- readFile loc
+--   let id   = takeWhile (/= '.') (last $ splitOn "/" loc)
+--       rows = createRows (unparseCsv file) id
+--   rest <- importCSV rest
+--   let verifiedPair =
+--         checkCharSet id >>= \verifiedId -> return (singleton verifiedId rows)
+--   return $ verifiedPair `mergeImports` rest
+
 importCSV :: [Import] -> IO (Result TableMap)
-importCSV []                              = return $ Ok emptyTable
-importCSV ((AliasedImport id loc) : rest) = do
-  file <- readFile loc
-  let rows = createRows (unparseCsv file) id
-  rest <- importCSV rest
-  return $ Ok (singleton id rows) `mergeImports` rest
-importCSV ((UnaliasedImport loc) : rest) = do
-  file <- readFile loc
-  let id   = takeWhile (/= '.') (last $ splitOn "/" loc)
-      rows = createRows (unparseCsv file) id
-  rest <- importCSV rest
-  let verifiedPair =
-        checkCharSet id >>= \verifiedId -> return (singleton verifiedId rows)
-  return $ verifiedPair `mergeImports` rest
+importCSV []      = return $ Ok emptyTable
+importCSV imports = handle readHandler (importCSV' imports)
+ where
+  importCSV' ((AliasedImport id loc) : rest) = do
+    file <- readFile loc
+    let rows = createRows (unparseCsv file) id
+    rest <- importCSV' rest
+    return $ Ok (singleton id rows) `mergeImports` rest
+  importCSV' ((UnaliasedImport loc) : rest) = do
+    file <- readFile loc
+    let id   = takeWhile (/= '.') (last $ splitOn "/" loc)
+        rows = createRows (unparseCsv file) id
+    rest <- importCSV' rest
+    let verifiedPair = checkCharSet id
+          >>= \verifiedId -> return (singleton verifiedId rows)
+    return $ verifiedPair `mergeImports` rest
+
+-- TODO: what if there is no Just but nothing instead?
+readHandler :: IOError -> IO (Result a)
+readHandler (IOError _ _ _ expl _ (Just loc)) =
+  return $ Error ("Import error: " ++ expl ++ " - " ++ loc)
 
 mergeImports :: Result TableMap -> Result TableMap -> Result TableMap
 mergeImports a b = do
@@ -107,7 +132,7 @@ unparseCsv l =
   let line = lines l
   in  let lists = map (splitOn ",") line in map (map trim) lists
 
--- Covert 2D array into a list of rows
+-- Convert 2D array into a list of rows
 createRows :: [[String]] -> Identifier -> [Row]
 createRows table name = [ fromList [(name, row)] | row <- table ]
 
@@ -120,7 +145,9 @@ trim = f . f where f = reverse . dropWhile isSpace
 
 evalRoot :: Query -> IO (Result Table)
 evalRoot (AST imports tableQuery) = do
+  putStrLn "Here maybe?"
   tables <- importCSV imports
+  putStrLn "There maybe?"
   case tables of
     Ok    map -> return $ evalTable map tableQuery
     Error e   -> return $ Error e
@@ -136,7 +163,14 @@ evalTable tables (id, joins, filter, selected) = do
   Ok (map (singleton id) selected)
 
 noTable id = Error $ "table '" ++ id ++ "' not found"
-errType expr actual expected = Error $ printExpr expr ++ " should be of type '"++printValueType expected++"', but got '"++printValueType actual++"'"
+errType expr actual expected =
+  Error
+    $  printExpr expr
+    ++ " should be of type '"
+    ++ printValueType expected
+    ++ "', but got '"
+    ++ printValueType actual
+    ++ "'"
 
 getImport :: TableMap -> String -> Result Table
 getImport tables id = case Data.Map.lookup id tables of
@@ -233,7 +267,7 @@ performSelect row (e : es) = do
  where
   checkType v = case v of
     ValueString v -> Ok v
-    _ -> errType e v (ValueString "")
+    _             -> errType e v (ValueString "")
 
 ----------------------------------------------------
 
