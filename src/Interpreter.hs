@@ -88,9 +88,9 @@ emptyTable = empty
 --   return $ verifiedPair `mergeImports` rest
 
 importCSV :: [Import] -> IO (Result TableMap)
-importCSV []      = return $ Ok emptyTable
 importCSV imports = handle readHandler (importCSV' imports)
  where
+  importCSV' []                              = return $ Ok emptyTable
   importCSV' ((AliasedImport id loc) : rest) = do
     file <- readFile loc
     let rows = createRows (unparseCsv file) id
