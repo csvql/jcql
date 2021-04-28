@@ -545,7 +545,7 @@ testInterpreter = testGroup
       [ testCase "coalesce returns first non null value"
       $   evalExpr
             (Function
-              "COALESCE"
+              "coalesce"
               [ ValueExpr (ValueString "")
               , ValueExpr (ValueString "")
               , ValueExpr (ValueString "wassup")
@@ -555,7 +555,7 @@ testInterpreter = testGroup
       @?= Ok (ValueString "wassup")
       , testCase "coalesce with all null values returns null"
       $   evalExpr
-            (Function "COALESCE"
+            (Function "coalesce"
                       [ValueExpr (ValueString ""), ValueExpr (ValueString "")]
             )
             empty
@@ -857,7 +857,7 @@ testInterpreter = testGroup
           $ case
               select
                 [ SelectExpr
-                    (Function "COALESCE" [TableColumn "A" 0, TableColumn "B" 0])
+                    (Function "coalesce" [TableColumn "A" 0, TableColumn "B" 0])
                 ]
                 joinedTable
             of

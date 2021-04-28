@@ -11,6 +11,7 @@ import           Parse
 
 import           AST                            ( Query(AST) )
 import           Data.Map
+import           System.Directory
 
 evalIO :: String -> IO (Result [[String]])
 evalIO s = do
@@ -26,15 +27,17 @@ singleTable res = do
   Prelude.map (head . elems) <$> res
 
 
-readF :: Int -> Int -> String -> IO String
-readF p e f = readFile ("./testCsv/p" ++ show p ++ "/e" ++ show e ++ "/" ++ f)
-
-example :: Int -> Int -> Assertion
-example p e = do
-  query    <- readF p e "query.cql"
-  out      <- evalIO query
-  expected <- readF p e "query.csv"
+problem :: FilePath -> Assertion
+problem path = do
+  (expected, query) <- readProblem' path
+  out               <- evalIO query
   out @?= Ok (unparseCsv expected)
+
+problem' :: FilePath -> TestTree
+problem' f = testCase f $ problem $ "./testCsv/problems/" ++ f ++ "/query"
+
+example :: FilePath -> TestTree
+example f = testCase f $ problem $ "./testCsv/examples/" ++ f
 
 testIntegration :: TestTree
 testIntegration = testGroup
@@ -44,31 +47,30 @@ testIntegration = testGroup
       evalIO
         "import a './testCsv/user.csv' take a where not (a.2 = 'Aleksei') select a.2, a.3"
     out @?= Ok [["Ryan", "GB"], ["Dom", "PL"]]
-  , testGroup "Example Problems"
-              [testGroup "Problem 1" [testCase "Example 1" $ example 1 1]]
   , testGroup
-    "Problems from Coursework"
-    [ testGroup
-      "Problem 1 (unsorted)"
-      [ testCase "Example 1" $ example 1 1
-      , testCase "Example 2" $ example 1 2
-      , testCase "Example 3" $ example 1 3
-      ]
-    , testGroup
-      "Problem 2 (unsorted)"
-      [ testCase "Example 1" $ example 2 1
-      , testCase "Example 2" $ example 2 2
-      , testCase "Example 3" $ example 2 3
-      ]
-    , testGroup
-      "Problem 3 (unsorted)"
-      [ testCase "Example 1" $ example 3 1
-      , testCase "Example 2" $ example 3 2
-      , testCase "Example 3" $ example 3 3
-      ]
-    , testGroup
-      "Problem 4 (unsorted)"
-      [testCase "Example 1" $ example 4 1, testCase "Example 2" $ example 4 2]
-    , testGroup "Problem 5 (unsorted)" [testCase "Example 2" $ example 5 1]
+    "Provided Problems"
+    [ problem' "1.1"
+    , problem' "1.2"
+    , problem' "1.3"
+    , problem' "2.1"
+    , problem' "2.2"
+    , problem' "2.3"
+    , problem' "3.1"
+    , problem' "3.2"
+    , problem' "3.3"
+    , problem' "4.1"
+    , problem' "4.2"
+    , problem' "5.1"
     ]
+  , testGroup "Example tests" [
+    example "multiple joins"
   ]
+  ]
+
+
+readProblem' :: FilePath -> IO (String, String)
+readProblem' dir = do
+  expected <- readFile $ dir ++ ".csv"
+  query    <- readFile $ dir ++ ".cql"
+  return (expected, query)
+

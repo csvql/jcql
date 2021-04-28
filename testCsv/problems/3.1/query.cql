@@ -1,6 +1,6 @@
 import
-    p './testCsv/p3/e1/P.csv',
-    q './testCsv/p3/e1/Q.csv'
+    p './testCsv/problems/3.1/P.csv',
+    q './testCsv/problems/3.1/Q.csv'
 take p
 cross join q
 where p.1=q.1
