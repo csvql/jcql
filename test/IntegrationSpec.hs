@@ -11,7 +11,6 @@ import           Parse
 
 import           AST                            ( Query(AST) )
 import           Data.Map
-import           System.Directory
 
 evalIO :: String -> IO (Result [[String]])
 evalIO s = do
