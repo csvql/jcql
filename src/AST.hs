@@ -55,6 +55,7 @@ data Value =
 
 data BinaryOpType =
   EQ
+  | NEQ
   | LT -- less than, <
   | LEQ -- less than or equal to, <=
   | GT -- greater than, >
@@ -92,6 +93,7 @@ printWhen (condition, value) =
 printBOP :: BinaryOpType -> String
 printBOP op = case op of
   AST.EQ   -> "="
+  AST.NEQ   -> "!="
   AST.LT -> "<"
   AST.LEQ -> "<="
   AST.GT -> ">"

@@ -22,7 +22,7 @@ import AST
     where {TKeyword "where" _}
     select {TKeyword "select" _}
     '=' {TOperator "=" _}
-    '==' {TOperator "==" _}
+    '!=' {TOperator "!=" _}
     '-' {TOperator "-" _}
     '+' {TOperator "+" _}
     '/' {TOperator "/" _}
@@ -47,7 +47,7 @@ import AST
 
 %left or
 %left and
-%nonassoc '=' '<' '>' '<=' '>='
+%nonassoc '=' '!=' '<' '>' '<=' '>='
 %left '+' '-'
 %left '*' '/' '%'
 %right not
@@ -80,6 +80,7 @@ selectItem : '*' {Wildcard}
     | expr {SelectExpr $1}
 
 expr : expr '=' expr { BinaryOpExpr $1 AST.EQ $3 }
+    | expr '!=' expr { BinaryOpExpr $1 AST.NEQ $3 }
     | expr '+' expr { BinaryOpExpr $1 Sum $3 }
     | expr '-' expr { BinaryOpExpr $1 Difference $3 }
     | expr and expr { BinaryOpExpr $1 AND $3 }

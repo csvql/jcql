@@ -22,7 +22,7 @@ tokens :-
 
 <0> "//".*     ;
 <0> $white+    ;
-<0> =|\-|\+|\/|\^|\%|@compare|not|and|or { \p s -> TOperator (map toLower s) p }
+<0> =|!=|\-|\+|\/|\^|\%|@compare|not|and|or { \p s -> TOperator (map toLower s) p }
 <0> true { \p _ -> TBool True p}
 <0> false { \p _ -> TBool False p}
 

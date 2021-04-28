@@ -136,7 +136,14 @@ evalTable tables (id, joins, filter, selected) = do
   Ok (map (singleton id) selected)
 
 noTable id = Error $ "table '" ++ id ++ "' not found"
-errType expr actual expected = Error $ printExpr expr ++ " should be of type '"++printValueType expected++"', but got '"++printValueType actual++"'"
+errType expr actual expected =
+  Error
+    $  printExpr expr
+    ++ " should be of type '"
+    ++ printValueType expected
+    ++ "', but got '"
+    ++ printValueType actual
+    ++ "'"
 
 getImport :: TableMap -> String -> Result Table
 getImport tables id = case Data.Map.lookup id tables of
@@ -233,7 +240,7 @@ performSelect row (e : es) = do
  where
   checkType v = case v of
     ValueString v -> Ok v
-    _ -> errType e v (ValueString "")
+    _             -> errType e v (ValueString "")
 
 ----------------------------------------------------
 
@@ -274,6 +281,7 @@ evalExpr expr row = case expr of
 evalBinaryOp :: BinaryOpType -> Value -> Value -> Result Value
 evalBinaryOp op = case op of
   AST.EQ         -> evalEQ
+  AST.NEQ        -> evalNEQ
   AST.LT         -> evalLT
   AST.LEQ        -> evalLEQ
   AST.GEQ        -> evalGEQ
@@ -290,6 +298,12 @@ evalEQ (ValueString a) (ValueString b) = return $ ValueBool (a == b)
 evalEQ (ValueInt    a) (ValueInt    b) = return $ ValueBool (a == b)
 evalEQ (ValueBool   a) (ValueBool   b) = return $ ValueBool (a == b)
 evalEQ _               _               = Error "Type Error"
+
+evalNEQ :: Value -> Value -> Result Value
+evalNEQ (ValueString a) (ValueString b) = return $ ValueBool (a /= b)
+evalNEQ (ValueInt    a) (ValueInt    b) = return $ ValueBool (a /= b)
+evalNEQ (ValueBool   a) (ValueBool   b) = return $ ValueBool (a /= b)
+evalNEQ _               _               = Error "Type Error"
 
 evalLEQ :: Value -> Value -> Result Value
 evalLEQ (ValueString a) (ValueString b) = return $ ValueBool (a <= b)
