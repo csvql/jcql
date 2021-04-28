@@ -1,13 +1,2 @@
 cradle:
   stack:
-    - path: "./src"
-      component: "jcql:lib"
-
-    - path: "./app/Main.hs"
-      component: "jcql:exe:jcql-exe"
-
-    - path: "./app/Paths_jcql.hs"
-      component: "jcql:exe:jcql-exe"
-
-    - path: "./test"
-      component: "jcql:test:jcql-test"

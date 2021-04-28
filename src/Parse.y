@@ -121,7 +121,7 @@ any(p,s) :   { [] }
 {
 
 parseError :: [Token] -> a
-parseError tokens = error $ "Error: unexpected token "++token
+parseError tokens = error $ "unexpected token "++token
       where
             token = if null tokens then "incomplete expression" else tokenPosn (head tokens)
 }
