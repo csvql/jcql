@@ -113,6 +113,19 @@ testParser = testGroup
                     )
             )
         ]
+        , testCase
+            "left join with equals"
+            (   parse
+                    "take a left join b on true"
+            @?= AST
+                    []
+                    ( "a"
+                    , [ AST.Left (TableRef "b") (ValueExpr (ValueBool True))]
+                    , Nothing
+                    , []
+                    , Nothing
+                    )
+            )
     , testGroup
         "filter"
         [ testCase

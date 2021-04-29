@@ -14,7 +14,7 @@ import           Data.Map                       ( Map
                                                 , lookup
                                                 , singleton
                                                 , toList
-                                                , unionWith
+                                                , unionWith, map
                                                 )
 import           Data.Maybe
 import           GHC.IO.Exception
@@ -130,7 +130,7 @@ checkCharSet (c : cs)
 unparseCsv :: String -> [[String]]
 unparseCsv l =
   let line = lines l
-  in  let lists = map (splitOn ",") line in map (map trim) lists
+  in  let lists = Prelude.map (splitOn ",") line in Prelude.map (Prelude.map trim) lists
 
 -- Convert 2D array into a list of rows
 createRows :: [[String]] -> Identifier -> [Row]
@@ -233,6 +233,10 @@ performJoins _      final []                         = Ok final
 performJoins tables table (Inner table2 exp : joins) = do
   toJoin <- resolveTableValue tables table2
   performJoins tables (innerJoin table toJoin exp) joins
+  
+performJoins tables table (AST.Left table2 exp : joins) = do
+  toJoin <- resolveTableValue tables table2
+  performJoins tables (leftJoin table toJoin exp) joins
 
 performJoins tables table (Cross table' : joins) = do
   t2 <- resolveTableValue tables table'
@@ -250,6 +254,16 @@ innerJoin t1 t2 e =
   , let row = findRow [ a `mergeMap` r | a <- t2 ] e
   , isJust row
   ]
+
+mkEmpty :: Row -> Row
+mkEmpty row = Data.Map.map (\r -> ["" | col <- r]) row
+
+leftJoin :: [Row] -> [Row] -> Expr -> [Row]
+leftJoin t1 t2 e =
+  [ (fromMaybe (r `mergeMap` mkEmpty (head t2)) row)
+  | r <- t1
+  , let row = findRow [ a `mergeMap` r | a <- t2 ] e
+  ]
 ----------------------------------------------------
 
 -- Filter
@@ -257,7 +271,7 @@ innerJoin t1 t2 e =
 -- TODO, important that only certain types of filters should be allowed
 filterTable :: Table -> Expr -> Result Table
 filterTable table expr = do
-  evaledExpr <- unwrap $ map (evalExpr expr) table
+  evaledExpr <- unwrap $ Prelude.map (evalExpr expr) table
   zipped     <- unwrap $ zipWith (curry validityCheck) evaledExpr table
   return $ [ row | (validity, row) <- zipped, validity ]
 
@@ -279,8 +293,8 @@ isValid _                 = Error "Typing Error"
 select :: Select -> Table -> Result [[String]]
 select items []           = Ok []
 select items (row : rows) = do
-  let exprs = map (unwrapSelect row) items
-  newRow <- unwrap $ map (performSelect row) exprs
+  let exprs = Prelude.map (unwrapSelect row) items
+  newRow <- unwrap $ Prelude.map (performSelect row) exprs
   rest   <- select items rows
   return (concat newRow : rest)
 
@@ -331,7 +345,7 @@ evalExpr expr row = case expr of
       Ok    v -> Ok v
       Error _ -> errUnaryType expr e value (ValueBool False)
   Function name args -> do
-    vals <- unwrap $ map (`evalExpr` row) args
+    vals <- unwrap $ Prelude.map (`evalExpr` row) args
     case evalFn name vals of
       Ok v -> Ok v
       Error err ->

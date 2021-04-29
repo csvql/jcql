@@ -24,6 +24,7 @@ data TableValue =
 -- TODO: Think about whether we need any more joins than this 
 data Join =
   Inner TableValue Expr
+  | Left TableValue Expr
   | Cross TableValue
     deriving (Show, Eq)
 

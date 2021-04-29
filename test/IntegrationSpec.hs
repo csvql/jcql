@@ -52,7 +52,7 @@ testIntegration = testGroup
     , problem' "4.2"
     , problem' "5.1"
     ]
-  , testGroup "Example tests" [example "multiple joins", example "alias"]
+  , testGroup "Example tests" [example "multiple joins", example "alias", example "left join"]
   , testGroup
     "Errors"
     [ testCase "Table not found" $ eval empty "take a" @?= Error
