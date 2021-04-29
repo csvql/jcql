@@ -3,4 +3,4 @@ import
   b "./testCsv/problems/1.1/B.csv"
 
 take a
-select a.1
+select a.1, a.2

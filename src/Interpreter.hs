@@ -143,22 +143,25 @@ trim = f . f where f = reverse . dropWhile isSpace
 
 -- eval :: TableMap -> TableQuery -> Table 
 
-evalRoot :: Query -> IO (Result Table)
+evalRoot :: Query -> IO (Result [[String]])
 evalRoot (AST imports tableQuery) = do
   tables <- importCSV imports
   case tables of
     Ok    map -> return $ evalTable map tableQuery
     Error e   -> return $ Error e
 
-evalTable :: TableMap -> TableQuery -> Result Table
-evalTable tables (id, joins, filter, selected) = do
+evalTable' tables (id, joins, filter, selected) = do
   take     <- getImport tables id
   joined   <- performJoins tables take joins
-  filtered <- case filter of
+  case filter of
     Nothing     -> Ok joined
     Just filter -> filterTable joined filter
+
+evalTable :: TableMap -> TableQuery -> Result [[String]]
+evalTable tables query@(id, joins, filter, selected) = do
+  filtered <- evalTable' tables query
   selected <- select selected filtered
-  Ok (map (singleton id) selected)
+  Ok selected
 
 noTable id = Error $ "table '" ++ id ++ "' not found"
 
@@ -205,7 +208,7 @@ resolveTableValue tables (TableRef id) = case Data.Map.lookup id tables of
   Nothing -> noTable id
   Just v  -> Ok v
 
-resolveTableValue tables (InlineTable q) = evalTable tables q
+resolveTableValue tables (InlineTable q) = evalTable' tables q
 --TODO: add resolver for InlineTable
 --TODO: return result and error if cannot look up table
 

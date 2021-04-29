@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3e181faf99bbc091f54fad00403fd786ebafd6b3ea6dbb26ac4ff1f8eef2682e
+-- hash: 885c0db981c36a5b2d93952cf9fb34dea735d7a20402ddc9db70db6d590e8aa7
 
 name:           jcql
 version:        0.1.0.0
@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
       AST
+      Eval
       Interpreter
       Lex
       Lib

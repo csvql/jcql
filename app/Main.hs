@@ -11,6 +11,8 @@ import           System.Environment             ( getArgs )
 import           System.IO                      ( hPutStrLn
                                                 , stderr
                                                 )
+import Data.List (intercalate)
+import Eval
 
 parse :: [FilePath] -> IO (Result String)
 parse [f] = do
@@ -34,17 +36,3 @@ run = do
     Ok content -> do
       catch (eval content) (\(ErrorCall e) -> printErr e)
     Error e -> printErr e
-
-eval :: String -> IO ()
-eval c = catch (eval' c) (\(ErrorCall e) -> printErr e)
- where
-  eval' c = do
-    parsed <- (evalRoot . parseJCQL . alexScanTokens) c
-    case parsed of
-      Error s -> printErr s
-      Ok    v -> print v
-
-printErr e = do
-  hSetSGR stderr [SetColor Foreground Vivid Red]
-  hPutStrLn stderr e
-  hSetSGR stderr [Reset]

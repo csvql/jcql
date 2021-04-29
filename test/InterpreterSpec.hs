@@ -730,32 +730,6 @@ testInterpreter = testGroup
               [("country", ["GB", "66"]), ("user", ["1", "Ryan", "GB"])]
             , fromList [("country", ["PL", "38"]), ("user", ["2", "Dom", "PL"])]
             ]
-        , testCase "Multiple Joins"
-        $   performJoins
-              tableMap
-              users
-              [ Inner
-                (TableRef "user")
-                (BinaryOpExpr (TableColumn "user" 1) AST.EQ (TableColumn "user" 1)
-                )
-              , Inner
-                (TableRef "country")
-                (BinaryOpExpr (TableColumn "user" 2)
-                              AST.EQ
-                              (TableColumn "country" 0)
-                )
-              ]
-        @?= Ok [ fromList
-              [ ("user"   , ["1", "Ryan", "GB"])
-              , ("user"   , ["1", "Ryan", "GB"])
-              , ("country", ["GB", "66"])
-              ]
-            , fromList
-              [ ("user"   , ["2", "Dom", "PL"])
-              , ("user"   , ["2", "Dom", "PL"])
-              , ("country", ["PL", "38"])
-              ]
-            ]
         , testCase "findRow valid query"
         $   findRow
               users

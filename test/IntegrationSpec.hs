@@ -11,17 +11,11 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 
 evalIO :: String -> IO (Result [[String]])
-evalIO s = do
-  table <- (evalRoot . parseJCQL . alexScanTokens) s
-  return $ singleTable table
+evalIO = evalRoot . parseJCQL . alexScanTokens
 
 eval :: TableMap -> String -> Result [[String]]
-eval tables s = singleTable $ evalTable tables query
+eval tables s = evalTable tables query
   where (AST _ query) = (parseJCQL . alexScanTokens) s
-
-singleTable :: Result Table -> Result [[String]]
-singleTable res = do
-  Prelude.map (head . elems) <$> res
 
 problem :: FilePath -> Assertion
 problem path = do
@@ -65,7 +59,9 @@ testIntegration = testGroup
       "table 'a' not found"
     , testCase "Column not found" $ eval tableA "take a select a.3" @?= Error
       "could not find column 2 in table 'a' (of length 1)"
-    , testCase "Invalid select type" $ eval tableA "take a select a.1 = ''" @?= Error "(a.1 = '') should be of type 'string', but got 'boolean'"
+    , testCase "Invalid select type"
+    $   eval tableA "take a select a.1 = ''"
+    @?= Error "Error in Expression: (a.1 = '') should be of type 'string', but got 'boolean'"
     ]
   ]
 tableA = singleton "a" [singleton "a" ["1", "2"]]
