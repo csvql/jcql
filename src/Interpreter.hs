@@ -233,7 +233,7 @@ performJoins _      final []                         = Ok final
 performJoins tables table (Inner table2 exp : joins) = do
   toJoin <- resolveTableValue tables table2
   performJoins tables (innerJoin table toJoin exp) joins
-  
+
 performJoins tables table (AST.Left table2 exp : joins) = do
   toJoin <- resolveTableValue tables table2
   performJoins tables (leftJoin table toJoin exp) joins
@@ -256,9 +256,10 @@ innerJoin t1 t2 e =
   ]
 
 mkEmpty :: Row -> Row
-mkEmpty row = Data.Map.map (\r -> ["" | col <- r]) row
+mkEmpty = Data.Map.map (\r -> ["" | col <- r])
 
 leftJoin :: [Row] -> [Row] -> Expr -> [Row]
+leftJoin t1 [] _ = t1
 leftJoin t1 t2 e =
   [ (fromMaybe (r `mergeMap` mkEmpty (head t2)) row)
   | r <- t1
