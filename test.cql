@@ -4,3 +4,4 @@ import
 
 take a
 select a.1, a.2
+order lexical

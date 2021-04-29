@@ -103,6 +103,7 @@ lexKeywords =
   , "end"
   , "where"
   , "select"
+  , "order"
   ]
 
 

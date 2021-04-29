@@ -150,7 +150,7 @@ evalRoot (AST imports tableQuery) = do
     Ok    map -> return $ evalTable map tableQuery
     Error e   -> return $ Error e
 
-evalTable' tables (id, joins, filter, selected) = do
+evalTable' tables (id, joins, filter, _, _) = do
   take     <- getImport tables id
   joined   <- performJoins tables take joins
   case filter of
@@ -158,10 +158,23 @@ evalTable' tables (id, joins, filter, selected) = do
     Just filter -> filterTable joined filter
 
 evalTable :: TableMap -> TableQuery -> Result [[String]]
-evalTable tables query@(id, joins, filter, selected) = do
+evalTable tables query@(id, joins, filter, selected, order) = do
+  orderAlgo <- checkOrder
   filtered <- evalTable' tables query
   selected <- select selected filtered
-  Ok selected
+  Ok (orderBy selected orderAlgo)
+  where
+    checkOrder = case order of
+      Nothing -> Ok OrderDefault
+      Just "default" -> Ok OrderDefault
+      Just "lexical" -> Ok OrderLexical
+      Just v -> Error $ "invalid order: '"++v++"'"
+
+orderBy:: [[String]] -> Order -> [[String]]
+orderBy table OrderDefault = table
+orderBy table OrderLexical = sort table
+
+data Order = OrderDefault | OrderLexical
 
 noTable id = Error $ "table '" ++ id ++ "' not found"
 

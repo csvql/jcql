@@ -21,6 +21,7 @@ import AST
     end {TKeyword "end" _}
     where {TKeyword "where" _}
     select {TKeyword "select" _}
+    order {TKeyword "order" _}
     '=' {TOperator "=" _}
     '!=' {TOperator "!=" _}
     '-' {TOperator "-" _}
@@ -58,7 +59,10 @@ ast : imports rootTableQuery {AST $1 $2}
 imports : import many(importExpr, ',') {$2}
         | {[]}
     
-rootTableQuery: take identifier any(joinExpr, ',') filter selectItems { ($2,$3,$4,$5) }
+rootTableQuery: take identifier any(joinExpr, ',') filter selectItems orderby { ($2,$3,$4,$5,$6) }
+
+orderby : order identifier {Just $2}
+        | {Nothing}
 
 tableQuery: identifier {TableRef $1}
  | '(' rootTableQuery ')' {InlineTable $2}

@@ -9,7 +9,7 @@ type TableQuery
   = (Identifier, -- take {{identifier}}
                  [Join], -- join (...)
                          Filter, -- filter 
-                                 Select) -- select
+                                 Select, Maybe String) -- select
 
 data Import =
   AliasedImport Identifier Location

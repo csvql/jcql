@@ -20,25 +20,25 @@ testParser = testGroup
             "unaliased import"
             (parse "import 'a.csv' take x select a.1" @?= AST
                 [UnaliasedImport "a.csv"]
-                ("x", [], Nothing, [SelectExpr (TableColumn "a" 0)])
+                ("x", [], Nothing, [SelectExpr (TableColumn "a" 0)], Nothing)
             )
         , testCase
             "aliased import"
             (parse "import A 'a.csv' take x select a.1" @?= AST
                 [AliasedImport "A" "a.csv"]
-                ("x", [], Nothing, [SelectExpr (TableColumn "a" 0)])
+                ("x", [], Nothing, [SelectExpr (TableColumn "a" 0)], Nothing)
             )
         , testCase
             "multiple unaliased imports"
             (parse "import 'a.csv', 'b.csv' take x select a.1" @?= AST
                 [UnaliasedImport "a.csv", UnaliasedImport "b.csv"]
-                ("x", [], Nothing, [SelectExpr (TableColumn "a" 0)])
+                ("x", [], Nothing, [SelectExpr (TableColumn "a" 0)], Nothing)
             )
         , testCase
             "multiple aliased imports"
             (parse "import B 'b.csv', A 'a.csv' take x select a.1" @?= AST
                 [AliasedImport "B" "b.csv", AliasedImport "A" "a.csv"]
-                ("x", [], Nothing, [SelectExpr (TableColumn "a" 0)])
+                ("x", [], Nothing, [SelectExpr (TableColumn "a" 0)], Nothing)
             )
         ]
     , testGroup
@@ -47,7 +47,7 @@ testParser = testGroup
               "take identifier"
               (parse "import 'a.csv' take A select a.1" @?= AST
                   [UnaliasedImport "a.csv"]
-                  ("A", [], Nothing, [SelectExpr (TableColumn "a" 0)])
+                  ("A", [], Nothing, [SelectExpr (TableColumn "a" 0)], Nothing)
               )
         ]
     , testGroup
@@ -56,7 +56,7 @@ testParser = testGroup
             "no join"
             (parse "import A 'a.csv', B 'b.csv' take A select a.1" @?= AST
                 [AliasedImport "A" "a.csv", AliasedImport "B" "b.csv"]
-                ("A", [], Nothing, [SelectExpr (TableColumn "a" 0)])
+                ("A", [], Nothing, [SelectExpr (TableColumn "a" 0)], Nothing)
             )
         , testCase
             "cross join"
@@ -67,6 +67,7 @@ testParser = testGroup
                     , [Cross (TableRef "B")]
                     , Nothing
                     , [SelectExpr (TableColumn "a" 0)]
+                    , Nothing
                     )
             )
         , testCase
@@ -85,6 +86,7 @@ testParser = testGroup
                       ]
                     , Nothing
                     , [SelectExpr (TableColumn "a" 0)]
+                    , Nothing
                     )
             )
         , testCase
@@ -107,6 +109,7 @@ testParser = testGroup
                       ]
                     , Nothing
                     , [SelectExpr (TableColumn "a" 0)]
+                    , Nothing
                     )
             )
         ]
@@ -122,6 +125,7 @@ testParser = testGroup
                     , [Cross (TableRef "B")]
                     , (Just (UnaryOpExpr NOT (ValueExpr (ValueInt 0))))
                     , [SelectExpr (TableColumn "a" 0)]
+                    , Nothing
                     )
             )
         , testCase
@@ -139,6 +143,7 @@ testParser = testGroup
                           )
                       )
                     , [SelectExpr (TableColumn "a" 0)]
+                    , Nothing
                     )
             )
         , testCase
@@ -156,6 +161,7 @@ testParser = testGroup
                           )
                       )
                     , [SelectExpr (TableColumn "a" 0)]
+                    , Nothing
                     )
             )
         , testCase
@@ -174,6 +180,7 @@ testParser = testGroup
                           )
                       )
                     , [SelectExpr (TableColumn "a" 0)]
+                    , Nothing
                     )
             )
         ]
@@ -201,7 +208,7 @@ testParser = testGroup
             "select one column"
             (parse "import 'a.csv' take x select a.1" @?= AST
                 [UnaliasedImport "a.csv"]
-                ("x", [], Nothing, [SelectExpr (TableColumn "a" 0)])
+                ("x", [], Nothing, [SelectExpr (TableColumn "a" 0)], Nothing)
             )
         , testCase
             "select multiple columns"
@@ -213,25 +220,31 @@ testParser = testGroup
                 , [ SelectExpr (TableColumn "a" 0)
                   , SelectExpr (TableColumn "a" 1)
                   ]
+                , Nothing
                 )
             )
         , testCase
             "select value"
             (parse "import 'a.csv' take x select 0" @?= AST
                 [UnaliasedImport "a.csv"]
-                ("x", [], Nothing, [SelectExpr (ValueExpr (ValueInt 0))])
+                ( "x"
+                , []
+                , Nothing
+                , [SelectExpr (ValueExpr (ValueInt 0))]
+                , Nothing
+                )
             )
         , testCase
             "select wildcard"
             (parse "import 'a.csv' take x select *" @?= AST
                 [UnaliasedImport "a.csv"]
-                ("x", [], Nothing, [Wildcard])
+                ("x", [], Nothing, [Wildcard], Nothing)
             )
         , testCase
             "select qualified wildcard"
             (parse "import 'a.csv' take x select a.*" @?= AST
                 [UnaliasedImport "a.csv"]
-                ("x", [], Nothing, [QualifiedWildcard "a"])
+                ("x", [], Nothing, [QualifiedWildcard "a"], Nothing)
             )
         ]
     , testGroup
@@ -246,6 +259,12 @@ testParser = testGroup
         $ parseExpr "case when 1 then case when 2 then 2 else 3 end else 69 end"
         @?= "case when (1) then (case when (2) then (2) else (3) end) else (69) end"
         ]
+    , testGroup
+        "ordering"
+        [ testCase "default" $ parse "take a select a.* order default" @?= AST
+              []
+              ("a", [], Nothing, [QualifiedWildcard "a"], Just "default")
+        ]
     ]
 
 parse :: String -> Query
@@ -255,5 +274,5 @@ parseExpr :: String -> String
 parseExpr s = trimBrackets $ printExpr $ getExpr ast
   where
     ast = parse ("import 'a.csv' take a where " ++ s ++ " select a.1")
-    getExpr (AST _ (_, _, f, _)) = fromJust f
+    getExpr (AST _ (_, _, f, _, _)) = fromJust f
     trimBrackets (fst : s) = if fst == '(' then init s else fst : s

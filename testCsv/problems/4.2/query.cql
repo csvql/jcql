@@ -3,4 +3,4 @@ import
 take a 
 where a.2 != ""
 select a.1, a.2
-    
+order lexical
