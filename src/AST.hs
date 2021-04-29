@@ -83,12 +83,12 @@ printExpr e = case e of
   Case whens els ->
     "case "
       ++ unwords (map printWhen whens)
-      ++ ") else ("
+      ++ " else ("
       ++ printExpr els
       ++ ") end"
 
 printWhen (condition, value) =
-  "when (" ++ printExpr condition ++ ") then (" ++ printExpr value
+  "when (" ++ printExpr condition ++ ") then (" ++ printExpr value ++ ")"
 
 printBOP :: BinaryOpType -> String
 printBOP op = case op of

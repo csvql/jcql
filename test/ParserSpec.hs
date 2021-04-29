@@ -254,7 +254,7 @@ testParser = testGroup
         @?= "case when (true) then (1) else (2) end"
         , testCase "multiple branches"
         $   parseExpr "case when true then 1 when false then 3 else 2 end"
-        @?= "case when (true) then (1 when (false) then (3) else (2) end"
+        @?= "case when (true) then (1) when (false) then (3) else (2) end"
         , testCase "nested"
         $ parseExpr "case when 1 then case when 2 then 2 else 3 end else 69 end"
         @?= "case when (1) then (case when (2) then (2) else (3) end) else (69) end"
