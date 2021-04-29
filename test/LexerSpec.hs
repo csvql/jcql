@@ -94,6 +94,7 @@ lexKeywords =
   , "take"
   , "join"
   , "inner"
+  , "left"
   , "cross"
   , "on"
   , "case"

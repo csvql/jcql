@@ -12,6 +12,7 @@ import AST
     take {TKeyword "take" _}
     join {TKeyword "join" _}
     inner {TKeyword "inner" _}
+    left {TKeyword "left" _}
     cross {TKeyword "cross" _}
     on {TKeyword "on" _}
     case {TKeyword "case" _}
@@ -72,6 +73,7 @@ importExpr : identifier string {AliasedImport $1 $2}
 
 joinExpr : cross join tableQuery {Cross $3}
     | inner join tableQuery on expr {Inner $3 $5}
+    | left join tableQuery on expr {AST.Left $3 $5}
 
 filter : where expr {Just $2}
     |   {Nothing}
