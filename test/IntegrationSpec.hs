@@ -58,7 +58,7 @@ testIntegration = testGroup
     [ testCase "Table not found" $ eval empty "take a" @?= Error
       "table 'a' not found"
     , testCase "Column not found" $ eval tableA "take a select a.3" @?= Error
-      "could not find column 2 in table 'a' (of length 1)"
+      "could not find column 3 in table 'a' (of length 1)"
     , testCase "Invalid select type"
     $   eval tableA "take a select a.1 = ''"
     @?= Error "Error in Expression: (a.1 = '') should be of type 'string', but got 'boolean'"

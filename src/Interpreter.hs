@@ -12,9 +12,10 @@ import           Data.Map                       ( Map
                                                 , fromList
                                                 , keys
                                                 , lookup
+                                                , map
                                                 , singleton
                                                 , toList
-                                                , unionWith, map
+                                                , unionWith
                                                 )
 import           Data.Maybe
 import           GHC.IO.Exception
@@ -130,7 +131,8 @@ checkCharSet (c : cs)
 unparseCsv :: String -> [[String]]
 unparseCsv l =
   let line = lines l
-  in  let lists = Prelude.map (splitOn ",") line in Prelude.map (Prelude.map trim) lists
+  in  let lists = Prelude.map (splitOn ",") line
+      in  Prelude.map (Prelude.map trim) lists
 
 -- Convert 2D array into a list of rows
 createRows :: [[String]] -> Identifier -> [Row]
@@ -151,8 +153,8 @@ evalRoot (AST imports tableQuery) = do
     Error e   -> return $ Error e
 
 evalTable' tables (id, joins, filter, _, _) = do
-  take     <- getImport tables id
-  joined   <- performJoins tables take joins
+  take   <- getImport tables id
+  joined <- performJoins tables take joins
   case filter of
     Nothing     -> Ok joined
     Just filter -> filterTable joined filter
@@ -160,17 +162,17 @@ evalTable' tables (id, joins, filter, _, _) = do
 evalTable :: TableMap -> TableQuery -> Result [[String]]
 evalTable tables query@(id, joins, filter, selected, order) = do
   orderAlgo <- checkOrder
-  filtered <- evalTable' tables query
-  selected <- select selected filtered
+  filtered  <- evalTable' tables query
+  selected  <- select selected filtered
   Ok (orderBy selected orderAlgo)
-  where
-    checkOrder = case order of
-      Nothing -> Ok OrderDefault
-      Just "default" -> Ok OrderDefault
-      Just "lexical" -> Ok OrderLexical
-      Just v -> Error $ "invalid order: '"++v++"'"
+ where
+  checkOrder = case order of
+    Nothing        -> Ok OrderDefault
+    Just "default" -> Ok OrderDefault
+    Just "lexical" -> Ok OrderLexical
+    Just v         -> Error $ "invalid order: '" ++ v ++ "'"
 
-orderBy:: [[String]] -> Order -> [[String]]
+orderBy :: [[String]] -> Order -> [[String]]
 orderBy table OrderDefault = table
 orderBy table OrderLexical = sort table
 
@@ -232,11 +234,13 @@ performJoins :: TableMap -> Table -> [Join] -> Result Table
 performJoins _      final []                         = Ok final
 performJoins tables table (Inner table2 exp : joins) = do
   toJoin <- resolveTableValue tables table2
-  performJoins tables (innerJoin table toJoin exp) joins
+  joined <- innerJoin table toJoin exp
+  performJoins tables joined joins
 
 performJoins tables table (AST.Left table2 exp : joins) = do
   toJoin <- resolveTableValue tables table2
-  performJoins tables (leftJoin table toJoin exp) joins
+  joined <- leftJoin table toJoin exp
+  performJoins tables joined joins
 
 performJoins tables table (Cross table' : joins) = do
   t2 <- resolveTableValue tables table'
@@ -247,24 +251,33 @@ crossJoin :: [Row] -> [Row] -> [Row]
 crossJoin xs ys = [ x `mergeMap` y | x <- xs, y <- ys ]
 
 -- inner join joins two tables only if Expr evaluates to True
-innerJoin :: [Row] -> [Row] -> Expr -> [Row]
-innerJoin t1 t2 e =
-  [ fromJust row
-  | r <- t1
-  , let row = findRow [ a `mergeMap` r | a <- t2 ] e
-  , isJust row
-  ]
+innerJoin :: [Row] -> [Row] -> Expr -> Result [Row]
+innerJoin [] _ _ = Ok []
+innerJoin _ [] _ = Ok []
+innerJoin t1 t2 e = do
+  let firstRow = head t1 `mergeMap` head t2
+  _ <- checkPredicate e [firstRow]
+  Ok
+    [ fromJust row
+    | r <- t1
+    , let row = findRow [ a `mergeMap` r | a <- t2 ] e
+    , isJust row
+    ]
 
 mkEmpty :: Row -> Row
-mkEmpty = Data.Map.map (\r -> ["" | col <- r])
+mkEmpty = Data.Map.map (\r -> [ "" | col <- r ])
 
-leftJoin :: [Row] -> [Row] -> Expr -> [Row]
-leftJoin t1 [] _ = t1
-leftJoin t1 t2 e =
-  [ (fromMaybe (r `mergeMap` mkEmpty (head t2)) row)
-  | r <- t1
-  , let row = findRow [ a `mergeMap` r | a <- t2 ] e
-  ]
+leftJoin :: [Row] -> [Row] -> Expr -> Result [Row]
+leftJoin t1 [] _ = Ok t1
+leftJoin [] _ _ = Ok []
+leftJoin t1 t2 e = do
+  let firstRow = head t1 `mergeMap` head t2
+  _ <- checkPredicate e [firstRow]
+  Ok
+    [ fromMaybe (r `mergeMap` mkEmpty (head t2)) row
+    | r <- t1
+    , let row = findRow [ a `mergeMap` r | a <- t2 ] e
+    ]
 ----------------------------------------------------
 
 -- Filter
@@ -276,6 +289,15 @@ filterTable table expr = do
   zipped     <- unwrap $ zipWith (curry validityCheck) evaledExpr table
   return $ [ row | (validity, row) <- zipped, validity ]
 
+checkPredicate :: Expr -> Table -> Result ()
+checkPredicate e [] = Ok ()
+checkPredicate e t  = do
+  evaled <- evalExpr e (head t)
+  case evaled of
+    ValueBool _ -> Ok ()
+    _           -> errType e evaled (ValueBool True)
+
+
 -- Basically unwraps a pair for simplicity sake
 validityCheck :: (Value, Row) -> Result (Bool, Row)
 validityCheck (val, row) = do
@@ -286,7 +308,10 @@ validityCheck (val, row) = do
 isValid :: Value -> Result Bool
 isValid (ValueBool True ) = Ok True
 isValid (ValueBool False) = Ok False
-isValid _                 = Error "Typing Error"
+isValid v =
+  Error
+    $  "'where' requires a predicate boolean expression, but given type "
+    ++ printValueType v
 ----------------------------------------------------
 
 -- Selection
@@ -619,12 +644,12 @@ findRow rows expr = do
 getColumn :: (String, Int) -> Row -> Result Value
 getColumn (key, i) row = case Data.Map.lookup key row of
   Nothing      -> noTable key
-  Just columns -> if i < length columns
+  Just columns -> if i < length columns && i >= 0
     then Ok (ValueString (columns !! i))
     else
       Error
       $  "could not find column "
-      ++ show i
+      ++ show (i+1)
       ++ " in table '"
       ++ key
       ++ "' (of length "

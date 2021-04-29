@@ -726,7 +726,7 @@ testInterpreter = testGroup
                             AST.EQ
                             (TableColumn "country" 0)
               )
-        @?= [ fromList
+        @?= Ok [ fromList
               [("country", ["GB", "66"]), ("user", ["1", "Ryan", "GB"])]
             , fromList [("country", ["PL", "38"]), ("user", ["2", "Dom", "PL"])]
             ]
