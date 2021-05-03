@@ -8,5 +8,6 @@ take p
     cross join q,
     cross join s,
     cross join r,
-    cross join t 
-select *
+    cross join t
+select p.*, q.*, s.*, r.*, t.*
+order lexical
