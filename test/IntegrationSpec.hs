@@ -54,7 +54,9 @@ testIntegration = testGroup
     , problem' "6.1"
     , problem' "7.1"
     , problem' "8.1"
-    , problem' "9.1"
+    -- , problem' "9.1"
+    , problem' "10.1"
+    , problem' "10.2"
     ]
   , testGroup "Example tests" [example "multiple joins", example "alias", example "left join", example "left join empty"]
   , testGroup
