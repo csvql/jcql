@@ -1,6 +1,6 @@
 import
-  p "./testCsv/problems/8.1/P.csv",
-  q "./testCsv/problems/8.1/Q.csv"
+  p "./testCsv/problems/8.2/P.csv",
+  q "./testCsv/problems/8.2/Q.csv"
 
 take q
 left join p on p.4=q.4
