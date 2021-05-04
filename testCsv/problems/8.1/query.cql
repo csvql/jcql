@@ -3,8 +3,7 @@ import
   q "./testCsv/problems/8.1/Q.csv"
 
 take q
-left join p on p.4=q.4
-where p.4=q.4
+inner join p on p.4=q.4
 select
   coalesce(q.1, p.1),
   coalesce(q.2, p.2),
