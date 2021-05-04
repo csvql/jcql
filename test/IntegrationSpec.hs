@@ -57,6 +57,7 @@ testIntegration = testGroup
     , problem' "8.2"
     , problem' "8.3"
     , problem' "9.1"
+    , problem' "9.2"
     , problem' "10.1"
     , problem' "10.2"
     ]
