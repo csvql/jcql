@@ -12,27 +12,7 @@ Declarative programming language designed to work with CSV files. The syntax is 
 
 Unlike SQL, in JCQL you have to first import your files, then join, filter, and only then select the columns.
 
-For example, the following SQL:
-
-```sql
-select a.1
-from a
-inner join b on b.1=a.1
-where b.1 is not null
-```
-
-Would be written as:
-
-
-```
-// import a.csv and b.csv (from the same folder)
-import 'a', 'b'
-take a                      // a is now in scope
-inner join b on b.1=a.1     // b is now added to scope
-where b.1 != ""
-select a.1
-```
-
+For example, the SQL in figure 1, would be written as the code in figure 2.
 
 This allows for a much more linear evaluation structure that is (in our opinion) much easier to follow. Just like in most general purpose languages, an identifier only comes into scope for expression below its declaration.
 
@@ -40,25 +20,11 @@ This allows for a much more linear evaluation structure that is (in our opinion)
 
 ### Import
 
-To use data stored in a comma separated values (csv) file, it first must be imported using the `import` command.
-
-```
-import
-	a 'A.csv'
-	'B.csv'
-```
-
-The first imported file, A.csv, has been aliased and can now be referenced as 'a' in the rest of the program. The second imported file, B.csv, is unaliased so has to be referred as 'B' in the program. JCQL imports allow the use of both relative and absolute paths.
+To use data stored in a comma separated values (csv) file, it first must be imported using the `import` command. In figure 3, first imported file, A.csv, has been aliased and can now be referenced as 'a' in the rest of the program. The second imported file, B.csv, is unaliased so has to be referred as 'B' in the program. JCQL imports allow the use of both relative and absolute paths.
 
 ### Joins
 
-JCQL allows for three types of joins.
-
-```
-cross join b
-inner join b on a.1 = b.1
-left join b on a.1 = b.1
-```
+JCQL allows for three types of joins which can be seen in figure 4.
 
 - `cross join` is the cartesian product of the table defined after the take expression, with the table specified after cross join.
 - `inner join` combines the table defined after the take expression, with the table specified after inner join, on the identified columns.
@@ -66,13 +32,7 @@ left join b on a.1 = b.1
 
 ### Select
 
-A `select` statement allows the user to specify the variables or columns that will be outputted. This feature is the same as in SQL.
-
-```
-select *
-select a.*
-select a.1,0,a.2*10
-```
+A `select` statement allows the user to specify the variables or columns that will be outputted. This feature is the same as in SQL. Examples of select statements can be found in Figure 5.
 
 - on its own is a wildcard this returns all the columns of the table.
 - `a.*` returns all the columns from table a.
@@ -82,21 +42,11 @@ select a.1,0,a.2*10
 
 ### Case
 
-A `case` statement works the same as in SQL, by going through the conditions and returning the value after the then if the condition is met. If none of the conditions are satisfied then the returned value is the one in the `else` clause. It is an expression that can be used in either `where` or `select` clauses.
-
-```
-case when a.1 == 0 then 1
-	 when a.1 != 0 then 2
-	 else 0
-```
+A `case` statement works the same as in SQL, by going through the conditions and returning the value after the then if the condition is met. If none of the conditions are satisfied then the returned value is the one in the `else` clause. It is an expression that can be used in either `where` or `select` clauses. Figure 6 contains an example case statement.
 
 ### Order
 
-JCQL allows the either lexical or default order, default ordering is the order that the data is in the csv file. Lexical ordering is also known as dictionary order, and orders the values depending on ASCii codes. If no `order` clause is present, default ordering is assumed.
-
-```
-order lexical
-```
+JCQL allows the either lexical or default order, default ordering is the order that the data is in the csv file. Lexical ordering is also known as dictionary order, and orders the values depending on ASCii codes. If no `order` clause is present, default ordering is assumed. Figure 7 shows an example order clause.
 
 ### Functions
 
@@ -113,41 +63,15 @@ order lexical
 
 We don't have to specify the table name when file names are valid identifiers, however when an invalid filename is used (e.g. `b$d.csv`) you will see the error: `illegal characters used in the import`
 
-```
-import file 'path/to/file.csv'
-// equivalent to:
-import 'path/to/file.csv'
-```
-
-Notice that we also allow to specify the full path to the file to be flexible to different scenarios.
+Notice that, in figure 8, we also allow to specify the full path to the file to be flexible to different scenarios.
 
 ### Select wildcard
 
-If you want to select all values from a table (or all tables), you can use the `*` (aka "wildcard"):
-
-```
-select a.1,a.2,a.3,a.4,
-    b.1,b.2,b.3,
-    c.1,c.2
-// this is always equivalent:
-select a.*, b.*, c.*
-// because of the alphabetic order
-select *
-```
+If you want to select all values from a table (or all tables), you can use the `*` (aka "wildcard"), as shown in figure 9.
 
 ### Comments & Whitespace
 
-JCQL allows for using whitespace and comments, so that you can use it to write simple one liners as well as complex multi-line queries:
-
-```
-import
-    "testCsv/country.csv", //(id,population)
-    "testCsv/user.csv" //(id, name, country)
-
-take user
-inner join country on country.1=user.3 // get country for each user, only show those who have a valid country row
-select user.2, country.2 // show user's name and country population
-```
+JCQL allows for using whitespace and comments, so that you can use it to write simple one liners as well as complex multi-line queries, an example of this can be found in figure 10.
 
 ## Evaluation
 
@@ -171,38 +95,160 @@ All the errors are formatted before being output to `stderr`
 
 ### Lexer
 
+This error, as seen in figure 11, occurs when an unknown character such as £ is used in a program. This error informs the user where the unknown character is in the program, as seen in the error above.
+
+### Parser
+
+A program just containing an `import` statement without a `take` clause would result in a incomplete expression error as both `import` and `take` clauses are mandatory. An example program where this error will occur and the error itself can be found in figure 12 and 13 respectively.
+
+The program in figure 14 would result in an unexpected token error, figure 15. This error informs the user where the unexpected token is as seen in the error above.
+
+### Interpreter
+
+1. Expressions errors (inside `where`, `select` and `inner/left join`)
+
+   The error is being _built up_ from bottom to the top. An example of this error can be found in figure 16.
+
+   The error takes place when type checking the `else` statement and return an error displaying the expression. As we go up to the expression evaluator, we combine the error with the overall `case` statement and then finally this is output to `stderr`. Simil
+
+2. Import errors
+
+   - Error relating to missing files for imports, figure 18.
+   - Error relating to the illegal character used at implicit naming of the file, figure 19.
+
+3. Invalid table reference error
+
+   - When addressing a non-existing table in any part of the code, figure 20.
+   - Invalid column error, figure 21.
+
+4. Invalid order request, figure 22.
+
+## Tooling
+
+### Syntax Highlighting
+
+We wrote a syntax highlighting plugin for VsCode that provides basic highlighting of keywords, strings, as well as numbers (for `.cql` files). The screenshot found in figure 23 shows an example of the syntax highlighting.
+
+### REPL
+
+We also added a simple REPL tool that allows programmers to experiment with queries without having to write them into a file, see figure 24 for an example.
+
+## Appendix
+
+### Code
+
+Figure 1, SQL code:
+```sql
+select a.1
+from a
+inner join b on b.1=a.1
+where b.1 is not null
+```
+
+Figure 2, The equivalent JCQL code:
+```
+// import a.csv and b.csv (from the same folder)
+import 'a', 'b'
+take a                      // a is now in scope
+inner join b on b.1=a.1     // b is now added to scope
+where b.1 != ""
+select a.1
+```
+
+### Syntax Screenshots
+
+Figure 3, Example imports:
+```
+import
+	a 'A.csv'
+	'B.csv'
+```
+
+Figure 4, Example joins:
+```
+cross join b
+inner join b on a.1 = b.1
+left join b on a.1 = b.1
+```
+
+Figure 5, Example select clauses:
+```
+select *
+select a.*
+select a.1,0,a.2*10
+```
+
+Figure 6, Example case statement:
+```
+case when a.1 == 0 then 1
+	 when a.1 != 0 then 2
+	 else 0
+```
+
+Figure 7, Example order clause:
+```
+order lexical
+```
+
+Figure 8, Example imports:
+```
+import file 'path/to/file.csv'
+// equivalent to:
+import 'path/to/file.csv'
+```
+
+Figure 9, Example wildcard:
+```
+select a.1,a.2,a.3,a.4,
+    b.1,b.2,b.3,
+    c.1,c.2
+// this is always equivalent:
+select a.*, b.*, c.*
+// because of the alphabetic order
+select *
+```
+
+Figure 10, Example comments and whitespace:
+```
+import
+    "testCsv/country.csv", //(id,population)
+    "testCsv/user.csv" //(id, name, country)
+
+take user
+inner join country on country.1=user.3 // get country for each user, only show those who have a valid country row
+select user.2, country.2 // show user's name and country population
+```
+### Errors
+
+Figure 11, Lexical error:
 ```
 lexical error at line <line_number>, column <column_number>
 ```
 
-This error occurs when an unknown character such as £ is used in a program. This error informs the user where the unknown character is in the program, as seen in the error above.
-
-### Parser
-
-```sql
+Figure 12, Example of incomplete expression:
+```
 import a 'A.csv'
 ```
 
+Figure 13, Incomplete expression:
 ```
 unexpected token incomplete expression
 ```
 
 
-A program just containing an `import` statement without a `take` clause would result in a incomplete expression error as both `import` and `take` clauses are mandatory.
 
-```sql
+Figure 14, Example of invalid token:
+```
 import a 'A.csv'
 take a v
 ```
 
+Figure 15, Invalid token:
 ```
 unexpected token <token> at line <line_number>, column <column_number>
 ```
 
-The above program would result in an unexpected token error. This error informs the user where the unexpected token is as seen in the error above.
-
-### Interpreter
-
+Figure 16, Haskell error handling:
 ```haskell
 data Result v =
   Ok v
@@ -210,58 +256,39 @@ data Result v =
   deriving (Eq, Show)
 ```
 
-1. Expressions errors (inside `where`, `select` and `inner/left join`)
+Figure 17, Expression error:
+```
+Error in expression: case statement 'case when ((test.1 = 'O')) then ('Frank') when ((test.2 = 'O')) then ('Kyle') else (3) end': expected type 'string' in expression 3 but got 'integer'
+```
 
-   The error is being _built up_ from bottom to the top. To explain this, here is an example:
+Figure 18, Error for missing file:
+```
+Import error: No such file or directory - <filename>.csv
+```
 
-   ```
-   Error in expression: case statement 'case when ((test.1 = 'O')) then ('Frank') when ((test.2 = 'O')) then ('Kyle') else (3) end': expected type 'string' in expression 3 but got 'integer'
-   ```
+Figure 19, Illegal character error:
+```
+illegal characters used in the import
+```
 
-   The error takes place when type checking the `else` statement and return an error displaying the expression. As we go up to the expression evaluator, we combine the error with the overall `case` statement and then finally this is output to `stderr`. Simil
+Figure 20, Non existing table error: 
+```
+table '<tablename>' not found
+```
 
-2. Import errors
+Figure 21, Invalid column error:
+```
+could not find column <given_column> in table '<tablename>' (of length <actual_length>)
+```
 
-   - Error relating to missing files for imports:
+Figure 22, Invalid order error:
+```
+invalid order: '<given_order>'
+```
+### Additional tools
 
-     ```
-     Import error: No such file or directory - <filename>.csv
-     ```
+Figure 23, Example highlighting:
+![Example syntax highlighting](./img/space.png)
 
-   - Error relating to the illegal character used at implicit naming of the file:
-
-     ```
-     illegal characters used in the import
-     ```
-
-3. Invalid table reference error
-
-   - When addressing a non-existing table in any part of the code:
-
-     ```
-     table '<tablename>' not found
-     ```
-
-   - Invalid column error
-
-     ```
-     could not find column <given_column> in table '<tablename>' (of length <actual_length>)
-     ```
-
-4. Invalid order request
-
-   ```
-   invalid order: '<given_order>'
-   ```
-
-## Tooling
-
-### Syntax Highlighting
-
-We wrote a syntax highlighting plugin for VsCode that provides basic highlighting of keywords, strings, as well as numbers (for `.cql` files). All the screenshots you are seeing above are using the syntax highlighting plugin.
-
-### REPL
-
-We also added a simple REPL tool that allows programmers to experiment with queries without having to write them into a file:
-
+Figure 24, Example repl:
 ![REPL demo](./img/repl.png)
