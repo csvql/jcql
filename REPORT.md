@@ -23,7 +23,16 @@ where b.1 is not null
 
 Would be written as:
 
-![Equivalent CQL syntax](img/intro.png){width=500}
+
+```
+// import a.csv and b.csv (from the same folder)
+import 'a', 'b'
+take a                      // a is now in scope
+inner join b on b.1=a.1     // b is now added to scope
+where b.1 != ""
+select a.1
+```
+
 
 This allows for a much more linear evaluation structure that is (in our opinion) much easier to follow. Just like in most general purpose languages, an identifier only comes into scope for expression below its declaration.
 
@@ -33,7 +42,7 @@ This allows for a much more linear evaluation structure that is (in our opinion)
 
 To use data stored in a comma separated values (csv) file, it first must be imported using the `import` command.
 
-```sql
+```
 import
 	a 'A.csv'
 	'B.csv'
@@ -45,7 +54,7 @@ The first imported file, A.csv, has been aliased and can now be referenced as 'a
 
 JCQL allows for three types of joins.
 
-```sql
+```
 cross join b
 inner join b on a.1 = b.1
 left join b on a.1 = b.1
@@ -59,12 +68,14 @@ left join b on a.1 = b.1
 
 A `select` statement allows the user to specify the variables or columns that will be outputted. This feature is the same as in SQL.
 
-```sql
+```
 select *
+select a.*
 select a.1,0,a.2*10
 ```
 
-- - on its own is a wildcard this returns all the columns of the table.
+- on its own is a wildcard this returns all the columns of the table.
+- `a.*` returns all the columns from table a.
 - `a.1` is column 1 from table a, this is how columns are represented in JCQL.
 - Integer, boolean and string values are able to be returned.
 - It is possible to select an expression, for example `a.2*10` multiplies the value in `a.2` by 10 and returns this value.
@@ -73,7 +84,7 @@ select a.1,0,a.2*10
 
 A `case` statement works the same as in SQL, by going through the conditions and returning the value after the then if the condition is met. If none of the conditions are satisfied then the returned value is the one in the `else` clause. It is an expression that can be used in either `where` or `select` clauses.
 
-```sql
+```
 case when a.1 == 0 then 1
 	 when a.1 != 0 then 2
 	 else 0
@@ -83,7 +94,7 @@ case when a.1 == 0 then 1
 
 JCQL allows the either lexical or default order, default ordering is the order that the data is in the csv file. Lexical ordering is also known as dictionary order, and orders the values depending on ASCii codes. If no `order` clause is present, default ordering is assumed.
 
-```sql
+```
 order lexical
 ```
 
@@ -102,7 +113,11 @@ order lexical
 
 We don't have to specify the table name when file names are valid identifiers, however when an invalid filename is used (e.g. `b$d.csv`) you will see the error: `illegal characters used in the import`
 
-![Automatic import names](img/sugar-imports.png){width=500}
+```
+import file 'path/to/file.csv'
+// equivalent to:
+import 'path/to/file.csv'
+```
 
 Notice that we also allow to specify the full path to the file to be flexible to different scenarios.
 
@@ -110,13 +125,29 @@ Notice that we also allow to specify the full path to the file to be flexible to
 
 If you want to select all values from a table (or all tables), you can use the `*` (aka "wildcard"):
 
-![Wildcard syntax](img/sugar-wildcard.png){width=500}
+```
+select a.1,a.2,a.3,a.4,
+    b.1,b.2,b.3,
+    c.1,c.2
+// this is always equivalent:
+select a.*, b.*, c.*
+// because of the alphabetic order
+select *
+```
 
 ### Comments & Whitespace
 
 JCQL allows for using whitespace and comments, so that you can use it to write simple one liners as well as complex multi-line queries:
 
-![Comments & Whitespace demo](img/space.png){width=500}
+```
+import
+    "testCsv/country.csv", //(id,population)
+    "testCsv/user.csv" //(id, name, country)
+
+take user
+inner join country on country.1=user.3 // get country for each user, only show those who have a valid country row
+select user.2, country.2 // show user's name and country population
+```
 
 ## Evaluation
 
@@ -140,9 +171,9 @@ All the errors are formatted before being output to `stderr`
 
 ### Lexer
 
-![Example of lexical error](img/lexical-error.png){width=200}
-
-Lexical error in JCQL
+```
+lexical error at line <line_number>, column <column_number>
+```
 
 This error occurs when an unknown character such as £ is used in a program. This error informs the user where the unknown character is in the program, as seen in the error above.
 
@@ -152,9 +183,10 @@ This error occurs when an unknown character such as £ is used in a program. Thi
 import a 'A.csv'
 ```
 
-![Example program of incomplete expression error](img/invalid-expression.png){width=200}
+```
+unexpected token incomplete expression
+```
 
-JCQL error for incomplete expression
 
 A program just containing an `import` statement without a `take` clause would result in a incomplete expression error as both `import` and `take` clauses are mandatory.
 
@@ -163,9 +195,9 @@ import a 'A.csv'
 take a v
 ```
 
-![Example program of incomplete expression error](img/invalid-expression.png){width=200}
-
-JCQL error for unrecognised token
+```
+unexpected token <token> at line <line_number>, column <column_number>
+```
 
 The above program would result in an unexpected token error. This error informs the user where the unexpected token is as seen in the error above.
 
@@ -232,4 +264,4 @@ We wrote a syntax highlighting plugin for VsCode that provides basic highlightin
 
 We also added a simple REPL tool that allows programmers to experiment with queries without having to write them into a file:
 
-![REPL demo](./img/repl.png){width=500}
+![REPL demo](./img/repl.png)
