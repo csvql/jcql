@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 885c0db981c36a5b2d93952cf9fb34dea735d7a20402ddc9db70db6d590e8aa7
+-- hash: b1f14a1fe28083d9bea0972a722707a7a4049fcf854c8542b9c99cc9e17c5db0
 
 name:           jcql
 version:        0.1.0.0
@@ -57,6 +57,28 @@ executable jcql-exe
       Paths_jcql
   hs-source-dirs:
       app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-tools:
+      alex
+    , happy
+  build-depends:
+      ansi-terminal
+    , array
+    , base >=4.7 && <5
+    , containers
+    , jcql
+    , split
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
+  default-language: Haskell2010
+
+executable jcql-repl
+  main-is: Main.hs
+  other-modules:
+      Paths_jcql
+  hs-source-dirs:
+      repl
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-tools:
       alex

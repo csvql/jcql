@@ -33,6 +33,16 @@ library:
   source-dirs: src
 
 executables:
+  jcql-repl:
+    main: Main.hs
+    source-dirs: repl
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+    dependencies:
+      - jcql
+        
   jcql-exe:
     main: Main.hs
     source-dirs: app
