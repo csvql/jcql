@@ -31,7 +31,7 @@ This allows for a much more linear evaluation structure that is (in our opinion)
 
 ### Import
 
-To use data stored in a comma separated values (csv) file, it first must be imported using the `import` command. 
+To use data stored in a comma separated values (csv) file, it first must be imported using the `import` command.
 
 ```sql
 import
@@ -57,21 +57,21 @@ left join b on a.1 = b.1
 
 ### Select
 
-A `select` statement allows the user to specify the variables or columns that will be outputted. This feature is the same as in SQL. 
+A `select` statement allows the user to specify the variables or columns that will be outputted. This feature is the same as in SQL.
 
 ```sql
 select *
 select a.1,0,a.2*10
 ```
 
-- * on its own is a wildcard this returns all the columns of the table.
+- - on its own is a wildcard this returns all the columns of the table.
 - `a.1` is column 1 from table a, this is how columns are represented in JCQL.
 - Integer, boolean and string values are able to be returned.
 - It is possible to select an expression, for example `a.2*10` multiplies the value in `a.2` by 10 and returns this value.
 
 ### Case
 
-A `case` statement works the same as in SQL, by going through the conditions and returning the value after the then if the condition is met. If none of the conditions are satisfied then the returned value is the one in the `else` clause.
+A `case` statement works the same as in SQL, by going through the conditions and returning the value after the then if the condition is met. If none of the conditions are satisfied then the returned value is the one in the `else` clause. It is an expression that can be used in either `where` or `select` clauses.
 
 ```sql
 case when a.1 == 0 then 1
@@ -81,7 +81,7 @@ case when a.1 == 0 then 1
 
 ### Order
 
-JCQL allows the either lexical or default order, default ordering is the order that the data is in the csv file. Lexical ordering is also know as dictionary order, and orders the values depending on ASCii codes. If no `order` clause is present, default ordering is assumed.
+JCQL allows the either lexical or default order, default ordering is the order that the data is in the csv file. Lexical ordering is also known as dictionary order, and orders the values depending on ASCii codes. If no `order` clause is present, default ordering is assumed.
 
 ```sql
 order lexical
@@ -90,11 +90,11 @@ order lexical
 ### Functions
 
 - Coalesce
-    - The `coalesce` function returns the first non null value in a column.
+  - The `coalesce` function returns the first non null value in a column.
 - Length
-    - The `length` function returns the number of characters in a string.
+  - The `length` function returns the number of characters in a string.
 - Nested
-    - This allows subqueries to be nested inside other queries.
+  - This allows subqueries to be nested inside other queries.
 
 ## Syntactic Features
 
@@ -120,18 +120,21 @@ JCQL allows for using whitespace and comments, so that you can use it to write s
 
 ## Evaluation
 
-As mentioned before, the evaluation is top to bottom in the similar fashion as a _pipe_.
+As mentioned before, the evaluation is top to bottom. As the interpreter receives the parsed `AST`, first of all it opens all the relevant files and imports the relevant files. All of this is store is a map that is used throughout most of a program
 
-- Firstly we start off with the `import` section, where all the global _variables_ (these are the only variables in our language) are defined that store the contents of the cql files. These can be accessed throughout the whole query.
-- The next step is where the imported files can be accessed via `take` and joined together with the other tables. The final table is passed down the pipe for the other functions to make use of
-  - Note that each `join` can have a nested `take` in it with other joins which extends the flexibility of combining tables in our language
-- `where` clause (optional) takes on the joined table and an expression and filters the table out row by row, adding it to the final table if the predicate is satisfied
-- `select` clause takes on the piped table from `where` (or the joined table in case `where` is skipped) and `select` statements, converts them to expressions that are to be evaluated against each row and again goes through each row one by one, outputting the resulting row
-- `order` clause (optional, default is _as is_) allows the table to be sorted in a lexicographical order, in case that is required
+From them on, the evaluation takes the same structure as a pipe in Shell. We can `take` a particular table, join it with the other table (that can be another nested `take` with joins) which would return a final joined table. This table can then be optionally passed to the `where` clause, that takes each row and evaluates it against a given expression (boolean that is type checked) and returns a newly filtered table.
 
-Each pipe is a Haskell function that takes on an Environment, which varies depending on the function, and reconstructs the table from it, which is then passed on to the next pipe. In the future, this allows even more additional pipes to be defined that will tweak the final output to the more flexible format.
+We then get to the point of selection where all the select statements are converted to expressions (each expression must result in a String type) and is evaluated against each row resulting in yet another table. Finally, we can optionally pipe it to the `order` and resort all the rows.
 
-## Informative Error Messages
+Each pipe is a Haskell function that takes on a table from the previous pipe and additional arguments (usually an expression) which varies depending on the function, and reconstructs the table from it, which is then passed on to the next pipe. This structure ensures the further scalability of the language, where even more additional pipes can be defined that will tweak the final output to the more desired format.
+
+## Error Messages and Type System
+
+JCQL is a strongly typed dynamic language perfect for scripting small queries when dealing with csv files. There are 3 main types defined: `String`, `Boolean` and `Integers`.
+
+- `String` is the default type for the table and is assumed for all tables and is expected in `select` statement
+- `Integer` is the type used generally in a bigger picture of comparison, and can take place in the `where` or `select` clause
+- `Boolean` is the most used type used extensively in `inner` and `left` joins, `where` clause and `case` clause
 
 All the errors are formatted before being output to `stderr`
 
@@ -173,76 +176,51 @@ data Result v =
   Ok v
   | Error String
   deriving (Eq, Show)
-
-instance  Functor Result  where
-  fmap _ (Error e) = Error e
-  fmap f (Ok    a) = Ok (f a)
-
-instance Applicative Result where
-  pure v = Error ""
-
-  Ok    f <*> m  = fmap f m
-  Error s <*> _m = Error s
-
-instance Monad Result where
-  (Error s) >>= f = Error s
-  (Ok    v) >>= f = f v
-  return v = Ok v
 ```
 
 1. Expressions errors (inside `where`, `select` and `inner/left join`)
 
-    The error is being *built up* from bottom to the top. To explain this, here is an example:
+   The error is being _built up_ from bottom to the top. To explain this, here is an example:
 
-    ```
-    import
-      test "test.csv"
+   ```
+   Error in expression: case statement 'case when ((test.1 = 'O')) then ('Frank') when ((test.2 = 'O')) then ('Kyle') else (3) end': expected type 'string' in expression 3 but got 'integer'
+   ```
 
-    take test
-    select case when test.1="O" then 'Frank' when test.2="O" then "Kyle" else 3 end
-    ```
-
-    ```
-    Error in expression: case statement 'case when ((test.1 = 'O')) then ('Frank') when ((test.2 = 'O')) then ('Kyle') else (3) end': expected type 'string' in expression 3 but got 'integer'
-    ```
-
-    The error takes place when type checking the `else` statement and return an error displaying the expression. As we go up to the expression evaluator, we combine the error with the overall `case` statement and then finally this is output to `stderr`. Simil
+   The error takes place when type checking the `else` statement and return an error displaying the expression. As we go up to the expression evaluator, we combine the error with the overall `case` statement and then finally this is output to `stderr`. Simil
 
 2. Import errors
-    - Error relating to missing files for imports:
 
-        ```
-        Import error: No such file or directory - <filename>.csv
-        ```
+   - Error relating to missing files for imports:
 
-    - Error relating to the illegal character used at implicit naming of the file:
+     ```
+     Import error: No such file or directory - <filename>.csv
+     ```
 
-        ```
-        illegal characters used in the import
-        ```
+   - Error relating to the illegal character used at implicit naming of the file:
+
+     ```
+     illegal characters used in the import
+     ```
 
 3. Invalid table reference error
-    - When addressing a non-existing table in any part of the code:
 
-        ```
-        table '<tablename>' not found
-        ```
+   - When addressing a non-existing table in any part of the code:
 
-    - Invalid column error
+     ```
+     table '<tablename>' not found
+     ```
 
-        ```
-        could not find column <given_column> in table '<tablename>' (of length <actual_length>)
-        ```
+   - Invalid column error
+
+     ```
+     could not find column <given_column> in table '<tablename>' (of length <actual_length>)
+     ```
 
 4. Invalid order request
 
-    ```
-    invalid order: '<given_order>'
-    ```
-
-## Type Checking
-
-TODO: explain strict type checking (in select, filter, function args, and function outputs), show examples of different error messages
+   ```
+   invalid order: '<given_order>'
+   ```
 
 ## Tooling
 
