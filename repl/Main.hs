@@ -8,11 +8,9 @@ import           Lex
 import           Parse
 import           System.Console.ANSI
 import           System.Environment             ( getArgs )
-import           System.IO                      ( hPutStrLn
-                                                , stderr
-                                                )
 import Data.List (intercalate)
 import Eval
+import System.IO
 
 parse :: [FilePath] -> IO (Result String)
 parse [f] = do
@@ -30,9 +28,18 @@ argReadHandler (IOError _ _ _ expl _ (Just loc)) =
 
 run :: IO ()
 run = do
-  args       <- getArgs
-  argsParsed <- handle argReadHandler $ parse args
-  case argsParsed of
+  hSetSGR stdout [SetColor Foreground Vivid Green]
+  hPutStr stdout "> "
+  hSetSGR stdout [Reset]
+  hFlush stdout
+  line <- getLine
+  evaled <- evalString line
+  case evaled of
     Ok content -> do
-      catch (eval content) (\(ErrorCall e) -> printErr e)
-    Error e -> printErr e
+      putStrLn $ printTable content
+      run
+    Error e -> do
+      printErr e
+      run
+
+evalString c = catch ((evalRoot . parseJCQL . alexScanTokens) c) (\(ErrorCall e) -> return $ Error e)
