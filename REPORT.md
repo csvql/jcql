@@ -55,11 +55,16 @@ JCQL allows for using whitespace and comments, so that you can use it to write s
 
 ## Evaluation
 
-As mentioned before, the evaluation is top to bottom.
+As mentioned before, the evaluation is top to bottom in the similar fashion as a _pipe_.
 
-### More Details
+- Firstly we start off with the `import` section, where all the global _variables_ (these are the only variables in our language) are defined that store the contents of the cql files. These can be accessed throughout the whole query.
+- The next step is where the imported files can be accessed via `take` and joined together with the other tables. The final table is passed down the pipe for the other functions to make use of
+  - Note that each `join` can have a nested `take` in it with other joins which extends the flexibility of combining tables in our language
+- `where` clause (optional) takes on the joined table and an expression and filters the table out row by row, adding it to the final table if the predicate is satisfied
+- `select` clause takes on the piped table from `where` (or the joined table in case `where` is skipped) and `select` statements, converts them to expressions that are to be evaluated against each row and again goes through each row one by one, outputting the resulting row
+- `order` clause (optional, default is _as is_) allows the table to be sorted in a lexicographical order, in case that is required
 
-Every query starts off with an `import` statement. The imports can either be
+Each pipe is a Haskell function that takes on an Environment, which varies depending on the function, and reconstructs the table from it, which is then passed on to the next pipe. In the future, this allows even more additional pipes to be defined that will tweak the final output to the more flexible format.
 
 ## Type Checking
 
@@ -76,4 +81,3 @@ We wrote a syntax highlighting plugin for VsCode that provides basic highlightin
 We also added a simple REPL tool that allows programmers to experiment with queries without having to write them into a file:
 
 ![REPL demo](./img/repl.png){width=500}
-
