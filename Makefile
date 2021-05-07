@@ -1,1 +1,2 @@
-pandoc REPORT.md -s -o report.pdf
+build:
+	pandoc REPORT.md -s -o report.pdf
