@@ -8,13 +8,17 @@ geometry: margin=2cm
 
 Declarative programming language designed to work with CSV files. The syntax is designed to be SQL-like, but with some differences:
 
-### Top to bottom scope evaluation
+1. No overcomplicated schemas
+   - The whole file is treated as a list of rows consisting of strings and all the manipulations would return the table in the same simple csv format, ready to be written to a file
+2. Top to bottom scope evaluation
 
-Unlike SQL, in JCQL you have to first import your files, then join, filter, and only then select the columns.
+   - Unlike SQL, in JCQL you have to first import your files, then join, filter, and only then select the columns.
 
-For example, the SQL in [Figure 1](#figure-1), would be written as the code in [Figure 2](#figure-2).
+   - For example, the SQL in [Figure 1](#figure-1), would be written as the code in [Figure 2](#figure-2).
 
-This allows for a much more linear evaluation structure that is (in our opinion) much easier to follow. Just like in most general purpose languages, an identifier only comes into scope for expression below its declaration.
+   - This allows for a much more linear evaluation structure that is much easier to follow. Just like in most general purpose languages, an identifier only comes into scope for expression below its declaration.
+
+The word **Just** amplifies the simplicity of this langauge allowing it to be efficiently used for quick transofrmations of your csv input.
 
 ## Features
 
@@ -57,31 +61,35 @@ JCQL allows the either lexical or default order, default ordering is the order t
 - Nested
   - This allows subqueries to be nested inside other queries.
 
+### Extended Operators for Expressions
+
+There is a series of operators that can be used on integers, booleans and the string (more on the types in [type system section](#error-messages-and-type-system)). For the whole list of operators, check [Figure 8](#figure-8)
+
 ## Syntactic Features
 
 ### Automatically named imports & full paths
 
 We don't have to specify the table name when file names are valid identifiers, however when an invalid filename is used (e.g. `b$d.csv`) you will see the error: `illegal characters used in the import`
 
-Notice that, in [Figure 8](#figure-8), we also allow to specify the full path to the file to be flexible to different scenarios.
+Notice that, in [Figure 9](#figure-9), we also allow to specify the full path to the file to be flexible to different scenarios.
 
 ### Select wildcard
 
-If you want to select all values from a table (or all tables), you can use the `*` (aka "wildcard"), as shown in [Figure 9](#figure-9).
+If you want to select all values from a table (or all tables), you can use the `*` (aka "wildcard"), as shown in [Figure 10](#figure-10).
 
 ### Comments & Whitespace
 
-JCQL allows for using whitespace and comments, so that you can use it to write simple one liners as well as complex multi-line queries, an example of this can be found in [Figure 10](#figure-10).
+JCQL allows for using whitespace and comments, so that you can use it to write simple one liners as well as complex multi-line queries, an example of this can be found in [Figure 11](#figure-11).
 
 ## Evaluation
 
-As mentioned before, the evaluation is top to bottom. As the interpreter receives the parsed `AST`, first of all it opens all the relevant files and imports the relevant files. All of this is store is a map that is used throughout most of a program
+As mentioned before, the evaluation is top to bottom. Each script consists of maximum 5 macro steps.
 
-From them on, the evaluation takes the same structure as a pipe in Shell. We can `take` a particular table, join it with the other table (that can be another nested `take` with joins) which would return a final joined table. This table can then be optionally passed to the `where` clause, that takes each row and evaluates it against a given expression (boolean that is type checked) and returns a newly filtered table.
-
-We then get to the point of selection where all the select statements are converted to expressions (each expression must result in a String type) and is evaluated against each row resulting in yet another table. Finally, we can optionally pipe it to the `order` and resort all the rows.
-
-Each pipe is a Haskell function that takes on a table from the previous pipe and additional arguments (usually an expression) which varies depending on the function, and reconstructs the table from it, which is then passed on to the next pipe. This structure ensures the further scalability of the language, where even more additional pipes can be defined that will tweak the final output to the more desired format.
+1. Importing (`import <file(s)>`) - the interpreter opens all the files stated (with relative paths or absolute, both being supported) and maps them to a name (aliased one or implicitly taken from the name of the file). These mappings will be used throughout the whole program
+2. Joining tables (`take`, `<join-type> join <table> (on <predicate>)`) - each statement starts with the `take`, where one of the previous imported tables is being accessed. It can then be followed by a series of joins, where table can be joined with either another table or other nested expressions consisting of `take` and joins. The result of this step is a new table of joins that is going to be used in the next step.
+3. Filtering rows (`where <expression>`, optional) - the table built before can be put through a filter where each row is evaluated against a predicate (expression). The rows satisfying that predicate will be kept in the resulting table.
+4. Selecting rows (`select <select_statement(s)>`) - each row is evaluated against a `select` expression that chooses which parts of a particular row will be used in the newly built table. The resulting table is built up row by row, just like with `where`
+5. Ordering rows (`order <order_type>`, optional) - the table's rows can be optionally ordered according to the definition of Lexicographical order in Haskell. By default (when no `order` is used) the order is kept _as is_
 
 ## Error Messages and Type System
 
@@ -95,7 +103,7 @@ All the errors are formatted before being output to `stderr` and explain the typ
 
 ### Lexer
 
-This error, as seen in [Figure 11](#figure-11), occurs when an unknown character such as £ is used in a program. This error informs the user where the unknown character is in the program, as seen in the error above.
+This error, as seen in [Figure 12](#figure-12), occurs when an unknown character such as £ is used in a program. This error informs the user where the unknown character is in the program, as seen in the error above.
 
 ### Parser
 
@@ -138,89 +146,122 @@ We also added a simple REPL tool that allows programmers to experiment with quer
 ### Code
 
 #### Figure 1
- SQL code:
+
+SQL code:
 
 ![](./img/figure-1.png){width=400}
 
 #### Figure 2
- The equivalent JCQL code:
+
+The equivalent JCQL code:
 
 ![](img/figure-2.png)
 
 ### Syntax Screenshots
 
 #### Figure 3
- Example imports:
+
+Example imports:
 
 ![](img/figure-3.png)
 
 #### Figure 4
- Example joins:
+
+Example joins:
 
 ![](./img/figure-4.png)
 
 #### Figure 5
- Example select clauses:
 
+Example select clauses:
 
 ![](./img/figure-5.png)
 
 #### Figure 6
- Example case statement:
+
+Example case statement:
 
 ![](./img/figure-6.png)
 
 #### Figure 7
- Example order clause:
+
+Example order clause:
 
 ![](./img/figure-7.png)
 
 #### Figure 8
- Example imports:
 
-![](./img/figure-8.png)
+Supported operators for language types
+
+| Operator | Integer                        | String                         | Boolean                        |
+| -------- | ------------------------------ | ------------------------------ | ------------------------------ |
+| =        | ![](./img/tick.png){width=10}  | ![](./img/tick.png){width=10}  | ![](./img/tick.png){width=10}  |
+| !=       | ![](./img/tick.png){width=10}  | ![](./img/tick.png){width=10}  | ![](./img/tick.png){width=10}  |
+| +        | ![](./img/tick.png){width=10}  | ![](./img/cross.png){width=10} | ![](./img/cross.png){width=10} |
+| -        | ![](./img/tick.png){width=10}  | ![](./img/cross.png){width=10} | ![](./img/cross.png){width=10} |
+| <        | ![](./img/tick.png){width=10}  | ![](./img/tick.png){width=10}  | ![](./img/cross.png){width=10} |
+| >        | ![](./img/tick.png){width=10}  | ![](./img/tick.png){width=10}  | ![](./img/cross.png){width=10} |
+| <=       | ![](./img/tick.png){width=10}  | ![](./img/tick.png){width=10}  | ![](./img/cross.png){width=10} |
+| >=       | ![](./img/tick.png){width=10}  | ![](./img/tick.png){width=10}  | ![](./img/cross.png){width=10} |
+| \*       | ![](./img/tick.png){width=10}  | ![](./img/cross.png){width=10} | ![](./img/cross.png){width=10} |
+| not      | ![](./img/cross.png){width=10} | ![](./img/cross.png){width=10} | ![](./img/tick.png){width=10}  |
+| and      | ![](./img/cross.png){width=10} | ![](./img/cross.png){width=10} | ![](./img/tick.png){width=10}  |
+| or       | ![](./img/cross.png){width=10} | ![](./img/cross.png){width=10} | ![](./img/tick.png){width=10}  |
 
 #### Figure 9
- Example wildcard:
+
+Example imports:
 
 ![](./img/figure-9.png)
 
 #### Figure 10
- Example comments and whitespace:
+
+Example wildcard:
 
 ![](./img/figure-10.png)
 
+#### Figure 11
+
+Example comments and whitespace:
+
+![](./img/figure-11.png)
+
 ### Errors
 
-#### Figure 11
- Lexical error:
+#### Figure 12
 
-![](./img/figure-11.png){width=500}
+Lexical error:
+
+![](./img/figure-12.png){width=500}
 
 #### Figure 13
- Incomplete expression:
+
+Incomplete expression:
 
 ![](./img/figure-13.png){width=500}
 
-
 #### Figure 14
- Example of invalid token:
+
+Example of invalid token:
 
 ![](./img/figure-14.png)
 
 #### Figure 15
- Invalid token:
+
+Invalid token:
 
 ![](./img/figure-15.png){width=500}
 
 #### Figure 16
- Haskell error handling:
+
+Haskell error handling:
 
 ![](./img/figure-16.png)
 
 #### Figure 17
- Type error with embedded expression:
- 
+
+Type error with embedded expression:
+
 Trying to select an integer:
 
 ![](./img/figure-17.png)
@@ -230,38 +271,45 @@ Invalid function argument type:
 ![](./img/figure-17.2.png)
 
 #### Figure 18
- Error for missing file:
+
+Error for missing file:
 
 ![](./img/figure-18.png){width=500}
 
 #### Figure 19
- Illegal character error:
+
+Illegal character error:
 
 ![](./img/figure-19.png){width=500}
 
 #### Figure 20
- Non existing table error: 
+
+Non existing table error:
 
 ![](./img/figure-20.png){width=500}
 
 #### Figure 21
- Invalid column error:
+
+Invalid column error:
 
 ![](./img/figure-21.png){width=500}
 
 #### Figure 22
- Invalid order error:
+
+Invalid order error:
 
 ![](./img/figure-22.png){width=500}
 
 ### Additional tools
 
 #### Figure 23
- Example highlighting:
+
+Example highlighting:
 
 ![](./img/figure-23.png)
 
 #### Figure 24
- Example repl:
+
+Example repl:
 
 ![](./img/repl.png)
