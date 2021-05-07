@@ -32,7 +32,7 @@ JCQL allows for three types of joins which can be seen in [Figure 4](#figure-4).
 
 ### Select
 
-A `select` statement allows the user to specify the variables or columns that will be outputted. This feature is the same as in SQL. Examples of select statements can be found in Figure 5.
+A `select` statement allows the user to specify the variables or columns that will be outputted. This feature is the same as in SQL. Examples of select statements can be found in [Figure 5](#figure-5).
 
 - on its own is a wildcard this returns all the columns of the table.
 - `a.*` returns all the columns from table a.
@@ -42,11 +42,11 @@ A `select` statement allows the user to specify the variables or columns that wi
 
 ### Case
 
-A `case` statement works the same as in SQL, by going through the conditions and returning the value after the then if the condition is met. If none of the conditions are satisfied then the returned value is the one in the `else` clause. It is an expression that can be used in either `where` or `select` clauses. Figure 6 contains an example case statement.
+A `case` statement works the same as in SQL, by going through the conditions and returning the value after the then if the condition is met. If none of the conditions are satisfied then the returned value is the one in the `else` clause. It is an expression that can be used in either `where` or `select` clauses. [Figure 6](#figure-6) contains an example case statement.
 
 ### Order
 
-JCQL allows the either lexical or default order, default ordering is the order that the data is in the csv file. Lexical ordering is also known as dictionary order, and orders the values depending on ASCii codes. If no `order` clause is present, default ordering is assumed. Figure 7 shows an example order clause.
+JCQL allows the either lexical or default order, default ordering is the order that the data is in the csv file. Lexical ordering is also known as dictionary order, and orders the values depending on ASCii codes. If no `order` clause is present, default ordering is assumed. [Figure 7](#figure-7) shows an example order clause.
 
 ### Functions
 
