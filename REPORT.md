@@ -88,10 +88,10 @@ Each pipe is a Haskell function that takes on a table from the previous pipe and
 JCQL is a strongly typed dynamic language perfect for scripting small queries when dealing with csv files. There are 3 main types defined: `String`, `Boolean` and `Integers`.
 
 - `String` is the default type for the table and is assumed for all tables and is expected in `select` statement
-- `Integer` is the type used generally in a bigger picture of comparison, and can take place in the `where` or `select` clause
-- `Boolean` is the most used type used extensively in `inner` and `left` joins, `where` clause and `case` clause
+- `Integer` can be used in predicates (e.g. `where length(user.name) > 10`)
+- `Boolean` is the most used type used extensively in `inner` and `left` joins, `where`, and `case`
 
-All the errors are formatted before being output to `stderr`
+All the errors are formatted before being output to `stderr` and explain the type issue thoroughly, as shown in [Figure 17](#figure-17).
 
 ### Lexer
 
@@ -127,7 +127,7 @@ The program in [Figure 14](#figure-14) would result in an unexpected token error
 
 ### Syntax Highlighting
 
-We wrote a syntax highlighting plugin for VsCode that provides basic highlighting of keywords, strings, as well as numbers (for `.cql` files). The screenshot found in [Figure 23](#figure-23) shows an example of the syntax highlighting.
+We wrote a syntax highlighting plugin for VsCode that provides basic highlighting of keywords, strings, as well as numbers (for `.cql` files). All screenshots found in the appendix are using our theme, and the screenshot found in [Figure 23](#figure-23) shows an example of the syntax highlighting with a different theme.
 
 ### REPL
 
@@ -139,180 +139,127 @@ We also added a simple REPL tool that allows programmers to experiment with quer
 
 #### Figure 1
  SQL code:
-```sql
-select a.1
-from a
-inner join b on b.1=a.1
-where b.1 is not null
-```
+
+![](./img/figure-1.png){width=400}
 
 #### Figure 2
  The equivalent JCQL code:
-```
-// import a.csv and b.csv (from the same folder)
-import 'a', 'b'
-take a                      // a is now in scope
-inner join b on b.1=a.1     // b is now added to scope
-where b.1 != ""
-select a.1
-```
+
+![](img/figure-2.png)
 
 ### Syntax Screenshots
 
 #### Figure 3
  Example imports:
-```
-import
-	a 'A.csv'
-	'B.csv'
-```
+
+![](img/figure-3.png)
 
 #### Figure 4
  Example joins:
-```
-cross join b
-inner join b on a.1 = b.1
-left join b on a.1 = b.1
-```
+
+![](./img/figure-4.png)
 
 #### Figure 5
  Example select clauses:
-```
-select *
-select a.*
-select a.1,0,a.2*10
-```
+
+
+![](./img/figure-5.png)
 
 #### Figure 6
  Example case statement:
-```
-case when a.1 == 0 then 1
-	 when a.1 != 0 then 2
-	 else 0
-```
+
+![](./img/figure-6.png)
 
 #### Figure 7
  Example order clause:
-```
-order lexical
-```
+
+![](./img/figure-7.png)
 
 #### Figure 8
  Example imports:
-```
-import file 'path/to/file.csv'
-// equivalent to:
-import 'path/to/file.csv'
-```
+
+![](./img/figure-8.png)
 
 #### Figure 9
  Example wildcard:
-```
-select a.1,a.2,a.3,a.4,
-    b.1,b.2,b.3,
-    c.1,c.2
-// this is always equivalent:
-select a.*, b.*, c.*
-// because of the alphabetic order
-select *
-```
+
+![](./img/figure-9.png)
 
 #### Figure 10
  Example comments and whitespace:
-```
-import
-    "testCsv/country.csv", //(id,population)
-    "testCsv/user.csv" //(id, name, country)
 
-take user
-inner join country on country.1=user.3 // get country for each user, only show those who have a valid country row
-select user.2, country.2 // show user's name and country population
-```
+![](./img/figure-10.png)
+
 ### Errors
 
 #### Figure 11
  Lexical error:
-```
-lexical error at line <line_number>, column <column_number>
-```
 
-#### Figure 12
- Example of incomplete expression:
-```
-import a 'A.csv'
-```
+![](./img/figure-11.png){width=500}
 
 #### Figure 13
  Incomplete expression:
-```
-unexpected token incomplete expression
-```
 
+![](./img/figure-13.png){width=500}
 
 
 #### Figure 14
  Example of invalid token:
-```
-import a 'A.csv'
-take a v
-```
+
+![](./img/figure-14.png)
 
 #### Figure 15
  Invalid token:
-```
-unexpected token <token> at line <line_number>, column <column_number>
-```
+
+![](./img/figure-15.png){width=500}
 
 #### Figure 16
  Haskell error handling:
-```haskell
-data Result v =
-  Ok v
-  | Error String
-  deriving (Eq, Show)
-```
+
+![](./img/figure-16.png)
 
 #### Figure 17
- Expression error:
-```
-Error in expression: case statement 'case when ((test.1 = 'O')) then ('Frank') when ((test.2 = 'O')) then ('Kyle') else (3) end': expected type 'string' in expression 3 but got 'integer'
-```
+ Type error with embedded expression:
+ 
+Trying to select an integer:
+
+![](./img/figure-17.png)
+
+Invalid function argument type:
+
+![](./img/figure-17.2.png)
 
 #### Figure 18
  Error for missing file:
-```
-Import error: No such file or directory - <filename>.csv
-```
+
+![](./img/figure-18.png){width=500}
 
 #### Figure 19
  Illegal character error:
-```
-illegal characters used in the import
-```
+
+![](./img/figure-19.png){width=500}
 
 #### Figure 20
  Non existing table error: 
-```
-table '<tablename>' not found
-```
+
+![](./img/figure-20.png){width=500}
 
 #### Figure 21
  Invalid column error:
-```
-could not find column <given_column> in table '<tablename>' (of length <actual_length>)
-```
+
+![](./img/figure-21.png){width=500}
 
 #### Figure 22
  Invalid order error:
-```
-invalid order: '<given_order>'
-```
+
+![](./img/figure-22.png){width=500}
+
 ### Additional tools
 
 #### Figure 23
  Example highlighting:
 
-![](./img/space.png)
+![](./img/figure-23.png)
 
 #### Figure 24
  Example repl:
