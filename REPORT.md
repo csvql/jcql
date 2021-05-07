@@ -95,7 +95,7 @@ As mentioned before, the evaluation is top to bottom. Each script consists of ma
 
 JCQL is a strongly typed dynamic language perfect for scripting small queries when dealing with csv files. There are 3 main types defined: `String`, `Boolean` and `Integers`.
 
-- `String` is the default type for the table and is assumed for all tables and is expected in `select` statement
+- `String` is the default type for each table row value and is assumed for all tables and is expected in `select` statement
 - `Integer` can be used in predicates (e.g. `where length(user.name) > 10`)
 - `Boolean` is the most used type used extensively in `inner` and `left` joins, `where`, and `case`
 
@@ -107,7 +107,7 @@ This error, as seen in [Figure 12](#figure-12), occurs when an unknown character
 
 ### Parser
 
-A program just containing an `import` statement without a `take` clause would result in a incomplete expression error as both `import` and `take` clauses are mandatory. An example program where this error will occur and the error itself can be found in [Figure 12](#figure-12) and 13 respectively.
+A program just containing an `import` statement without a `take` clause would result in a incomplete expression error as both `import` and `take` clauses are mandatory. An example program where this error will occur and the error itself can be found in [Figure 13](#figure-13). 
 
 The program in [Figure 14](#figure-14) would result in an unexpected token error, [Figure 15](#figure-15). This error informs the user where the unexpected token is as seen in the error above.
 
