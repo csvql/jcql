@@ -18,13 +18,13 @@ Declarative programming language designed to work with CSV files. The syntax is 
 
    - This allows for a much more linear evaluation structure that is much easier to follow. Just like in most general purpose languages, an identifier only comes into scope for expression below its declaration.
 
-The word **Just** amplifies the simplicity of this langauge allowing it to be efficiently used for quick transofrmations of your csv input.
+The word **Just** amplifies the simplicity of this langauge allowing it to be efficiently used for quick transformations of your csv input.
 
 ## Features
 
 ### Import
 
-To use data stored in a comma separated values (csv) file, it first must be imported using the `import` command. In [Figure 3](#figure-3), first imported file, A.csv, has been aliased and can now be referenced as 'a' in the rest of the program. The second imported file, B.csv, is unaliased so has to be referred as 'B' in the program. JCQL imports allow the use of both relative and absolute paths.
+To use data stored in a comma separated values (csv) file, it first must be imported using the `import` command. In [Figure 3](#figure-3), first imported file, A.csv, has been aliased and can now be referenced as 'a' in the rest of the program. The second imported file, B.csv, doesn't have an alias so has to be referred as 'B' in the program. JCQL imports allow the use of both relative and absolute paths.
 
 ### Joins
 
@@ -63,7 +63,7 @@ JCQL allows the either lexical or default order, default ordering is the order t
 
 ### Extended Operators for Expressions
 
-There is a series of operators that can be used on integers, booleans and the string (more on the types in [type system section](#error-messages-and-type-system)). For the whole list of operators, check [Figure 8](#figure-8)
+There is a series of operators that can be used on integers, booleans and the string (more on the types in [type system section](#error-messages-and-type-system)). For the whole list of operators, check [Figure 8](#figure-8).
 
 ## Syntactic Features
 
@@ -117,7 +117,7 @@ The program in [Figure 14](#figure-14) would result in an unexpected token error
 
    The error is being _built up_ from bottom to the top. An example of this error can be found in [Figure 16](#figure-16).
 
-   The error takes place when type checking the `else` statement and return an error displaying the expression. As we go up to the expression evaluator, we combine the error with the overall `case` statement and then finally this is output to `stderr`. Simil
+   The error takes place when type checking the `else` statement and return an error displaying the expression. As we go up to the expression evaluator, we combine the error with the overall `case` statement and then finally this is output to `stderr`.
 
 2. Import errors
 
@@ -188,6 +188,8 @@ Example case statement:
 Example order clause:
 
 ![](./img/figure-7.png)
+
+\newpage
 
 #### Figure 8
 
